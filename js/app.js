@@ -469,6 +469,32 @@
         return (r.note || '') + nudge(r.f, cmd.dir, cmd.small);
       }
       case 'zone': return zoneMove(cmd);
+      case 'lastball': {
+        if (!state.lastBall) return 'No ball has been bowled yet. Say "bowl" first.';
+        const { ev, d } = state.lastBall;
+        return `${d.delivery}. The batter played ${C.SHOTS[ev.shot].name.toLowerCase()}${d.shot.includes('(') ? ' ' + d.shot.slice(d.shot.indexOf('(')) : ''}. ${d.result}`;
+      }
+      case 'cell': {
+        showTab('sim');
+        if (!state.stats || state.statsStale) runSimulation({ quiet: true });
+        const lenKey = cmd.length || 'good', lineKey = cmd.line || 'fourth';
+        if (!cmd.length || !cmd.line) {
+          // one dimension given: aggregate the other
+          const st = state.stats; const agg = {}; let n = 0, runs = 0, outs = 0;
+          for (const [k, c] of Object.entries(st.cells)) {
+            const [l, ln] = k.split('|');
+            if ((cmd.length && l !== cmd.length) || (cmd.line && ln !== cmd.line)) continue;
+            n += c.n; runs += c.runs; outs += c.outs;
+            for (const [id, v] of Object.entries(c.shots)) { agg[id] = agg[id] || { n: 0, b: 0 }; agg[id].n += v.n; agg[id].b += v.fours + v.sixes; }
+          }
+          if (!n) return 'No such deliveries in the last simulation.';
+          const top = Object.entries(agg).sort((a, b) => b[1].n - a[1].n).slice(0, 3).map(([id, v]) => `${C.SHOTS[id].name} ${C.pct(v.n / n)}`).join(', ');
+          const bt = Object.entries(agg).sort((a, b) => b[1].b - a[1].b)[0];
+          const label = cmd.length ? C.LENGTHS[cmd.length].name : C.LINES[cmd.line].name;
+          return `${label}: ${n} balls, ${C.fmt((runs / n) * 6, 1)} runs per over, ${outs} wickets. Most played: ${top}.${bt && bt[1].b ? ` Most boundaries: ${C.SHOTS[bt[0]].name.toLowerCase()}.` : ''}`;
+        }
+        return showCell(lenKey + '|' + lineKey);
+      }
       case 'move': {
         let pm = C.matchPosition(cmd.to), toGuess = '';
         if (!pm) { pm = C.matchPosition(cmd.to, { min: 0.55 }); if (pm) toGuess = `(I took “${cmd.to}” as ${C.POS_BY_ID[pm.id].name}.) `; }
@@ -583,8 +609,10 @@
       const ev = C.simulateBall(prep, c, C.makeRng());
       const d = C.describeEvent(ev, state.field, c);
       runs += ev.runs; if (ev.out) wkts++;
+      ev.desc = d;
       overBalls.push(ev);
-      if (overBalls.length > 6) overBalls = overBalls.slice(-6);
+      if (overBalls.length > 12) overBalls = overBalls.slice(-12);
+      state.lastBall = { ev, d };
       renderOverLog();
       $('#ticker').innerHTML = `<span class="del">${esc(d.delivery)}</span> <span class="shot">${esc(d.shot)}</span> <b class="${BALL_RESULT_CLASS(ev)}">${esc(d.result)}</b>`;
       $('#ticker').classList.add('show');
@@ -597,13 +625,38 @@
     return `Over complete: ${runs} run${runs === 1 ? '' : 's'}${wkts ? `, ${wkts} wicket${wkts > 1 ? 's' : ''}` : ''}.`;
   }
   function renderOverLog() {
-    $('#over-log').innerHTML = '<span class="lbl">Last balls</span>' + overBalls.map((ev) => `<span class="ball-chip ${BALL_RESULT_CLASS(ev)}" title="${esc(C.SHOTS[ev.shot].name)}">${BALL_SYMBOL(ev)}</span>`).join('');
+    const recent = overBalls.slice(-6);
+    $('#over-log').innerHTML = '<span class="lbl">Last balls</span>' + recent.map((ev) => `<span class="ball-chip ${BALL_RESULT_CLASS(ev)}" title="${esc(ev.desc ? ev.desc.delivery + ' → ' + ev.desc.shot : C.SHOTS[ev.shot].name)}">${BALL_SYMBOL(ev)}</span>`).join('');
+    $('#ball-feed').innerHTML = overBalls.slice().reverse().map((ev) => `<li class="${BALL_RESULT_CLASS(ev)}"><span class="bf-del">${esc(ev.desc.delivery)}</span><span class="bf-shot">→ ${esc(ev.desc.shot)}</span><b>${esc(ev.desc.result)}</b></li>`).join('');
+  }
+
+  /** One-line spoken/written description of a logged or simulated ball. */
+  function ballSentence(b) {
+    const len = C.LENGTHS[b.len].name.toLowerCase(), line = C.LINES[b.line].name.toLowerCase();
+    const res = b.out ? `OUT (${b.out})` : b.runs === 4 ? 'FOUR' : b.runs === 6 ? 'SIX' : b.runs ? `${b.runs} run${b.runs > 1 ? 's' : ''}` : 'dot';
+    const where = b.theta != null ? ' to ' + C.describe(b.theta, Math.hypot(b.x, b.y), ground()).replace(' (adj.)', '') : '';
+    return `${b.kph} km/h ${len} on ${line} → ${C.SHOTS[b.shot].name}${b.quality && b.quality !== 'clean' && b.quality !== 'left' ? ' (' + b.quality + ')' : ''} → ${res}${where}`;
+  }
+
+  /** Summary of a line × length cell from the last simulation. */
+  function cellSummary(lenKey, lineKey, st = state.stats) {
+    const cell = st && st.cells[lenKey + '|' + lineKey];
+    const label = `${C.LENGTHS[lenKey].name} on ${C.LINES[lineKey].name.toLowerCase()}`;
+    if (!cell || !cell.n) return { label, text: `No ${label.toLowerCase()} deliveries in the last simulation.`, shots: [] };
+    const shots = Object.entries(cell.shots).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+    const top = shots.slice(0, 3).map((x) => `${C.SHOTS[x.id].name} ${C.pct(x.n / cell.n)}`).join(', ');
+    const bShots = shots.filter((x) => x.fours + x.sixes > 0).sort((a, b) => (b.fours + b.sixes) - (a.fours + a.sixes));
+    const wShots = shots.filter((x) => x.outs > 0).sort((a, b) => b.outs - a.outs);
+    let text = `${label}: ${cell.n} balls, ${C.fmt((cell.runs / cell.n) * 6, 1)} runs per over, ${cell.outs} wicket${cell.outs === 1 ? '' : 's'}. Batters mostly played ${top}.`;
+    if (bShots.length) text += ` Boundaries came from the ${C.SHOTS[bShots[0].id].name.toLowerCase()} (${bShots[0].fours} fours, ${bShots[0].sixes} sixes)${bShots[1] ? ` and the ${C.SHOTS[bShots[1].id].name.toLowerCase()}` : ''}.`;
+    if (wShots.length) text += ` Wickets mainly off the ${C.SHOTS[wShots[0].id].name.toLowerCase()}.`;
+    return { label, text, shots, cell };
   }
 
   function runSimulation({ balls, quiet } = {}) {
     const c = ctx();
     const N = balls || state.s.simBalls;
-    const st = C.evaluateField(state.field, c, { balls: N, seed: (Math.random() * 1e9) | 0, wagon: 500 });
+    const st = C.evaluateField(state.field, c, { balls: N, seed: (Math.random() * 1e9) | 0, wagon: 500, log: 600 });
     state.stats = st; state.statsStale = false;
     renderSimResults(st, c);
     if (!view.layers.heatmap && !view.layers.wagon) setLayer('heatmap', true);
@@ -640,12 +693,84 @@
         ${statCard('Net score', C.fmt(C.objectiveScore(st, c, state.s.objective), 2), 'lower = better for bowling side')}
       </div>
       <h4>Insights</h4><ul class="insights">${ins}</ul>
+      <h4>Line &amp; length map <small>(runs per over · click a cell for the shots played)</small></h4>
+      ${lineLengthMap(st)}
+      <div id="cell-detail" class="cell-detail"></div>
+      <h4>Boundaries &amp; wickets by delivery</h4>
+      ${comboTable(st)}
       <h4>Dismissals (${st.wkts})</h4><div class="bars">${dis}</div>
       <h4>Shots played</h4>
       <table class="tbl"><thead><tr><th>Shot</th><th>Freq</th><th>Runs/6</th><th>Outs</th></tr></thead><tbody>${shotRows}</tbody></table>
       <h4>Fielder workload</h4>
       <table class="tbl"><thead><tr><th>Fielder</th><th>Involved</th><th>Catches</th><th>Drops</th></tr></thead><tbody>${fRows}</tbody></table>
+      <h4>Ball-by-ball log <small>(first ${st.log.length} balls)</small></h4>
+      <div class="log-filters">
+        <select id="lf-len"><option value="">All lengths</option>${Object.entries(C.LENGTHS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>
+        <select id="lf-line"><option value="">All lines</option>${Object.entries(C.LINES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>
+        <select id="lf-res"><option value="">All results</option><option value="b">Boundaries</option><option value="4">Fours</option><option value="6">Sixes</option><option value="w">Wickets</option><option value="0">Dots</option></select>
+      </div>
+      <div class="ball-log-wrap"><table class="tbl ball-log"><thead><tr><th>#</th><th>km/h</th><th>Length</th><th>Line</th><th>Shot</th><th>Result</th><th>Where</th></tr></thead><tbody id="ball-log-body"></tbody></table></div>
       <p class="hint">Model: ball-by-ball physics-lite simulation (delivery → shot choice → execution → ball flight → fielder reach/catch). Use it to compare fields, not as an exact forecast.</p>`;
+    $$('.llm td[data-cell]', out).forEach((td) => td.addEventListener('click', () => showCell(td.dataset.cell)));
+    ['#lf-len', '#lf-line', '#lf-res'].forEach((id) => $(id, out).addEventListener('change', () => renderBallLog(st)));
+    renderBallLog(st);
+  }
+
+  function lineLengthMap(st) {
+    const lens = Object.keys(C.LENGTHS), lines = Object.keys(C.LINES);
+    let maxR = 0;
+    for (const k in st.cells) { const c = st.cells[k]; if (c.n >= 5) maxR = Math.max(maxR, c.runs / c.n); }
+    const head = `<tr><th></th>${lines.map((l) => `<th title="${esc(C.LINES[l].name)}">${esc(C.LINES[l].short)}</th>`).join('')}</tr>`;
+    const rows = lens.map((len) => `<tr><th>${esc(C.LENGTHS[len].short)}</th>${lines.map((line) => {
+      const c = st.cells[len + '|' + line];
+      if (!c || !c.n) return '<td class="empty">–</td>';
+      const rpb = c.runs / c.n;
+      const h = Math.round(130 - 130 * Math.min(1, rpb / Math.max(0.01, maxR)));
+      const top = Object.entries(c.shots).sort((a, b) => b[1].n - a[1].n)[0];
+      return `<td data-cell="${len}|${line}" style="--h:${h}" title="${esc(C.LENGTHS[len].name)} · ${esc(C.LINES[line].name)}: ${c.n} balls, ${C.fmt(rpb * 6, 1)} rpo, ${c.outs} wkts, top shot ${esc(C.SHOTS[top[0]].name)}"><b>${C.fmt(rpb * 6, 1)}</b><small>${c.n}${c.outs ? ' · ' + c.outs + 'W' : ''}</small></td>`;
+    }).join('')}</tr>`).join('');
+    return `<div class="llm-wrap"><table class="llm">${head}${rows}</table></div>`;
+  }
+
+  function comboTable(st) {
+    const combos = [];
+    for (const [k, c] of Object.entries(st.cells)) {
+      const [len, line] = k.split('|');
+      for (const [id, v] of Object.entries(c.shots)) combos.push({ len, line, id, ...v });
+    }
+    const b = combos.filter((x) => x.fours + x.sixes).sort((a, c) => (c.fours + c.sixes) - (a.fours + a.sixes)).slice(0, 8);
+    const w = combos.filter((x) => x.outs).sort((a, c) => c.outs - a.outs).slice(0, 6);
+    const row = (x, val) => `<tr><td>${esc(C.LENGTHS[x.len].name)}, ${esc(C.LINES[x.line].name.toLowerCase())}</td><td>${esc(C.SHOTS[x.id].name)}</td><td>${val}</td></tr>`;
+    return `<div class="grid2 combos">
+      <table class="tbl"><thead><tr><th>Delivery</th><th>Shot</th><th>4s / 6s</th></tr></thead><tbody>${b.map((x) => row(x, `${x.fours} / ${x.sixes}`)).join('') || '<tr><td colspan="3">None</td></tr>'}</tbody></table>
+      <table class="tbl"><thead><tr><th>Delivery</th><th>Shot</th><th>Wkts</th></tr></thead><tbody>${w.map((x) => row(x, x.outs)).join('') || '<tr><td colspan="3">None</td></tr>'}</tbody></table>
+    </div>`;
+  }
+
+  function showCell(key) {
+    const [len, line] = key.split('|');
+    const sum = cellSummary(len, line);
+    const el = $('#cell-detail');
+    if (!sum.cell) { el.innerHTML = esc(sum.text); return sum.text; }
+    $$('.llm td.sel').forEach((t) => t.classList.remove('sel'));
+    const td = $(`.llm td[data-cell="${key}"]`); if (td) td.classList.add('sel');
+    el.innerHTML = `<h4>${esc(sum.label)}</h4><p>${esc(sum.text)}</p>
+      <table class="tbl"><thead><tr><th>Shot played</th><th>Share</th><th>Runs/6</th><th>4s</th><th>6s</th><th>Outs</th></tr></thead><tbody>
+      ${sum.shots.map((x) => `<tr><td>${esc(C.SHOTS[x.id].name)}</td><td>${C.pct(x.n / sum.cell.n)}</td><td>${C.fmt((x.runs / x.n) * 6, 1)}</td><td>${x.fours}</td><td>${x.sixes}</td><td>${x.outs}</td></tr>`).join('')}
+      </tbody></table>`;
+    return sum.text;
+  }
+
+  function renderBallLog(st) {
+    const fl = $('#lf-len').value, fln = $('#lf-line').value, fr = $('#lf-res').value;
+    const rows = st.log.filter((b) => (!fl || b.len === fl) && (!fln || b.line === fln) && (!fr || (fr === 'w' ? b.out : fr === 'b' ? (!b.out && b.runs >= 4) : !b.out && String(b.runs) === fr)));
+    const g = ground();
+    $('#ball-log-body').innerHTML = rows.slice(0, 250).map((b) => {
+      const res = b.out ? `<b class="w">W · ${esc(b.out)}</b>` : b.runs === 6 ? '<b class="six">6</b>' : b.runs === 4 ? '<b class="four">4</b>' : b.runs ? String(b.runs) : '•';
+      const where = b.theta != null ? C.describe(b.theta, Math.hypot(b.x, b.y), g).replace(' (adj.)', '') : '—';
+      const q = b.quality && !['clean', 'left'].includes(b.quality) ? ` <small>(${esc(b.quality)})</small>` : '';
+      return `<tr><td>${b.i}</td><td>${b.kph}${b.slower ? '<small> sl</small>' : ''}</td><td>${esc(C.LENGTHS[b.len].short)}</td><td>${esc(C.LINES[b.line].short)}</td><td>${esc(C.SHOTS[b.shot].name)}${q}</td><td>${res}</td><td>${esc(where)}</td></tr>`;
+    }).join('') || '<tr><td colspan="7">No balls match these filters.</td></tr>';
   }
 
   // ------------------------------------------------------------------
@@ -1056,7 +1181,9 @@
     if (!text) return;
     const t = document.createElement('div');
     t.className = 'toast';
-    t.innerHTML = `<span>${esc(text)}</span>`;
+    const shown = text.length > 230 ? text.slice(0, 227) + '…' : text;
+    t.innerHTML = `<span>${esc(shown)}</span>`;
+    t.title = text;
     if (action) {
       const b = document.createElement('button');
       b.className = 'link'; b.textContent = action;
@@ -1092,6 +1219,7 @@
     ['Situation', ['T10', 'T20', 'ODI', 'test match', 'powerplay', 'outside the powerplay', 'death overs', 'left hander', 'switch batter', 'right arm leg spinner', 'left arm orthodox', 'left arm fast', 'medium pacer', 'around the wicket', 'keeper up']],
     ['Conditions', ['green pitch', 'the pitch is dusty', 'flat pitch', 'bouncy pitch', 'slow pitch', 'overcast', 'dew', 'fast outfield', 'small boundaries']],
     ['Bowling plan & batter', ['bowl short', 'bowl yorkers', 'bowl wide', 'fourth stump channel', 'stump to stump', 'power hitter batter', 'anchor batter']],
+    ['Delivery analysis', ['what shot was that', 'what happens on fourth stump good length', 'shots against yorkers', 'what do they play on middle stump short']],
     ['Simulate', ['bowl', 'bowl an over', 'simulate 1000 balls', 'simulate cover drive', 'simulate 5 overs of pull shots', 'any shots']],
     ['Statistics', ['which field is best', 'load the best field', 'compare pitches', 'optimise the field', 'apply', 'analyse this field']],
     ['Info & view', ['where is mid on', 'read the field', 'is the field legal', 'zoom in', 'zoom out', 'show heatmap', 'show wagon wheel', 'hide labels', 'dark mode', 'help', 'stop listening']],

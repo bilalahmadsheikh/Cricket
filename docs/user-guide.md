@@ -55,6 +55,14 @@ Toolbar buttons:
 - **Run simulation** plays 600 to 12,000 balls. It reports runs per over, balls per wicket, dot-ball %, boundary %, chances and drops, and a net score. It also gives plain-English insights, the mix of dismissals, a breakdown by shot and each fielder's workload.
 - **Shot focus** makes the batter play one shot only. Use it to test how well a field stops, say, the pull or the sweep.
 
+Each ball you bowl is listed with its speed, length and line, the **shot played** and the result. For example: *142 km/h · good length, 4th stump → cover drive → FOUR through extra cover*.
+
+After **Run simulation** you also get:
+
+- **Line & length map.** A 7 × 7 grid (lengths down the side, lines across the top) showing runs per over, ball count and wickets. Click a cell to see every shot batters played to that delivery, with share, runs, 4s, 6s and outs.
+- **Boundaries & wickets by delivery.** The delivery-and-shot combinations that produced the most boundaries and the most wickets.
+- **Ball-by-ball log.** The first 600 balls, which you can filter by length, line and result (boundaries, 4s, 6s, wickets, dots).
+
 After a simulation the **heat-map** turns on. It colours each 15° slice of the ground by how many runs went through it. Turn on the **wagon wheel** to see individual shots:
 
 - Blue: four.

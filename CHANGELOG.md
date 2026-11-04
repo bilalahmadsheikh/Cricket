@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.0 — 2026-11-04
+
+### Added
+
+- **Fine delivery model**
+  - 7 lines × 7 lengths, including full tosses and bouncers.
+  - Speed in km/h for every ball.
+  - Every ball records the shot played, the edge or mistime if any, the result and where it went.
+- **Line & length map** with a click-to-drill shot breakdown for each cell.
+- **Tables:** boundary and wicket sources by delivery and shot, plus a filterable ball-by-ball log.
+- **Voice questions:** "what shot was that?", "what happens on 4th stump good length?", "shots against yorkers".
+- **More data**
+  - Shots: 4 new (lofted on-drive, whip over mid-wicket, switch hit, chip over the infield), 29 in total.
+  - Positions: 3 new (short mid-on, short mid-off, deep forward square leg), 48 in total.
+  - Bowlers: express pace, right and left arm.
+  - Pitches: abrasive (reverse swing) and cracked.
+  - Batter profiles: finisher, weak vs spin, weak vs pace.
+  - Fields: T10 powerplay field, powerplay short-ball plan, attacking white-ball spin ring, and a leg-stump whip trap.
+
+
 ## 1.1.0 — 2026-11-04
 
 ### Added

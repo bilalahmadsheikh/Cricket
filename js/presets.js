@@ -98,6 +98,16 @@
       positions: ['point', 'extracover', 'midwicket', 'shortfine', 'deepcoverpoint', 'longoff', 'longon', 'cowcorner', 'deepmidwicket'],
       description: 'Fire it in flat; every straight hit and slog has a man on the rope.' }),
 
+    P({ id: 'pace_t10_pp', name: 'T10 powerplay — 2 slips, third man & deep square', kind: 'pace', formats: ['T10'], phases: ['powerplay'], style: 'attack', plan: 'channel',
+      positions: ['slip1', 'slip2', 'point', 'cover', 'midoff', 'midon', 'midwicket', 'thirdman', 'deepsquare'],
+      description: 'Only two overs of powerplay: attack with two slips, but cover the two big T10 scoring areas behind point and square on the leg side.' }),
+    P({ id: 'pace_pp_short', name: 'Powerplay short-ball plan — deep square & fine leg', kind: 'pace', formats: ['T20', 'ODI', 'T10'], phases: ['powerplay'], style: 'balanced', plan: 'short',
+      positions: ['slip1', 'gully', 'shortleg', 'point', 'cover', 'midoff', 'midon', 'deepsquare', 'fineleg'],
+      description: 'Use your two outfielders for the pull and hook; gully and short leg take the fend.' }),
+    P({ id: 'spin_ring_attack', name: 'Spin — slip, short cover & short mid-wicket', kind: 'spin', formats: ['T20', 'ODI'], phases: ['middle'], style: 'attack', keeper: 'up', plan: 'flight',
+      positions: ['slip1', 'shortcover', 'shortmidwicket', 'point', 'midoff', 'midon', 'deepcoverpoint', 'longon', 'deepsquare'],
+      description: 'Attacking spin in white-ball cricket: catchers for the chip and the leading edge while three men guard the rope.' }),
+
     // ===================== TRAPS =====================
     P({ id: 'trap_bouncer', trap: true, name: 'Trap: bouncer / hook trap', kind: 'pace', formats: ['T20', 'ODI', 'Test'], phases: ['middle', 'death', 'oldball', 'declare'], style: 'attack', plan: 'short',
       positions: ['slip1', 'gully', 'shortleg', 'point', 'midoff', 'deepsquare', 'deepbacksquare', 'fineleg', 'deepmidwicket'],
@@ -140,6 +150,9 @@
       positions: ['slip1', 'shortcover', 'point', 'midwicket', 'longoff', 'longon', 'deepcoverpoint', 'deepmidwicket', 'shortfine'],
       description: 'Toss it up to tempt the charge: the stumping, the chip to short cover, or the miscued loft to long-off/long-on.' }),
 
+    P({ id: 'trap_whip', trap: true, name: 'Trap: leg-stump whip (short mid-wicket & deep forward square)', kind: 'pace', formats: ['T20', 'ODI', 'T10'], phases: ['middle', 'death'], style: 'attack', plan: 'body',
+      positions: ['point', 'cover', 'midoff', 'midon', 'shortmidwicket', 'deepforwardsquare', 'deepmidwicket', 'fineleg', 'thirdman'],
+      description: 'Bowl at the pads to the leg-side whipper: short mid-wicket for the early flick, deep forward square and deep mid-wicket for the loft.' }),
     P({ id: 'trap_ring', trap: true, name: 'Ring field — save the single', kind: 'any', formats: ['T20', 'ODI', 'Test'], phases: ['powerplay', 'middle', 'death', 'newball', 'oldball', 'declare'], style: 'defend', plan: 'stumps',
       positions: ['point', 'coverpoint', 'cover', 'extracover', 'midoff', 'midon', 'midwicket', 'squareleg', 'shortfine'],
       description: 'Everyone saving one (e.g. last ball, one to win). Every lofted hit clears the infield, so use sparingly.' }),
@@ -155,8 +168,7 @@
     if (p.turn && b.kind === 'spin' && p.turn !== CFS.turnFor(ctx.bowlerType, ctx.hand)) return 0;
     let s = 1;
     // T10 uses the same tactical fields as T20 (same restrictions after the powerplay)
-    const fmt = ctx.format === 'T10' ? 'T20' : ctx.format;
-    if (p.formats.includes(fmt)) s += 1;
+    if (p.formats.includes(ctx.format) || (ctx.format === 'T10' && p.formats.includes('T20'))) s += 1;
     if (p.phases.includes(ctx.phase)) s += 1;
     return s;
   }

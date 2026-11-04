@@ -8,6 +8,13 @@ FieldCraft rates fields with a ball-by-ball Monte-Carlo engine in `js/sim.js`. T
    - On *Auto*, the plan depends on the phase and the bowler type. Death overs, for example, get a high share of yorkers.
    - Pace bowlers bowl slower balls: 7% in the powerplay, 16% in the middle overs, 24% at the death.
    - Spinners bowl variations, such as the googly or the arm ball, 10–15% of the time.
+   - Each coarse bucket is then refined into the **fine delivery** that's shown and analysed:
+     - **7 lines:** wide, 5th stump, 4th stump, off stump, middle, leg stump, down leg.
+     - **7 lengths:** yorker, full toss (a missed yorker or a full ball that slipped), full, good, back of a length, short, bouncer. Spinners bowl long hops, never bouncers.
+   - Fine lines blend the coarse shot tables, e.g. off stump is 45% "off" and 55% "stumps".
+   - Full tosses are easier to hit. Bouncers invite hooks and leaves.
+   - Bowled and LBW chances depend on the exact line, highest on middle stump.
+   - Each ball also gets a **speed**: express about 150 km/h, fast about 140, medium-fast about 127, finger spin about 87, wrist spin about 81, and slower balls about 18% off.
 2. **Shot choice.** One of 25 shots is chosen. Each shot's weight is the product of:
    - how well it suits the length and line,
    - how well it suits the bowler type (sweeps against spin, hooks against pace),
@@ -36,6 +43,8 @@ FieldCraft rates fields with a ball-by-ball Monte-Carlo engine in `js/sim.js`. T
    - **Wickets** that don't involve a fielder: bowled, LBW, and stumped (only when the keeper is standing up to spin).
 
 ## Fair comparisons
+
+Every ball also writes to a **line × length table**: balls, runs, outs, 4s and 6s, broken down by shot played. The UI's map, the drill-down and the voice answers are built from that table. A ball-by-ball log of the first 600 balls is kept as well.
 
 Ball *i* uses the seed `seed + i × constant` for every field being compared. All fields therefore face the same sequence of deliveries and shot choices, so differences in the results come from fielder positions and not from luck. These are called common random numbers.
 

@@ -16,7 +16,7 @@
 (function (root) {
   'use strict';
   const CFS = root.CFS;
-  const { SHOTS, SHOT_IDS, PITCHES, BOWLERS, BATTERS, PLANS, FORMATS, OUTFIELDS, OVERHEAD,
+  const { SHOTS, SHOT_IDS, LINES, LENGTHS, LINE_SPLIT, LENGTH_SPLIT, PITCHES, BOWLERS, BATTERS, PLANS, FORMATS, OUTFIELDS, OVERHEAD,
     toXY, makeRng, clamp, DEG, PITCH_LEN, boundaryDist, angDiff, normAngle, gradeFactor } = CFS;
 
   const G = 9.81;
@@ -91,6 +91,21 @@
     return { fs, keeperUp, gap };
   }
 
+  // ---------- fine-delivery affinity ----------
+  /** Shot affinity for the actual (fine) line, blending the coarse table. */
+  function lnAff(s, del) {
+    const mix = LINES[del.fineLine] ? LINES[del.fineLine].mix : { [del.line]: 1 };
+    let a = 0;
+    for (const k in mix) a += mix[k] * (s.Ln[k] || 0);
+    return a;
+  }
+  function lenAff(s, del) {
+    let a = s.L[del.length] || 0;
+    if (del.fineLength === 'fulltoss') a = s.L.full * (s.g >= 2 ? 1.25 : 0.7);
+    if (del.fineLength === 'bouncer') a = (s.L.short || 0) * (s.id === 'hook' || s.id === 'uppercut' || s.id === 'leave' ? 1.4 : 0.75);
+    return a;
+  }
+
   // ---------- shot selection ----------
   function chooseShot(ctx, prep, del, rng) {
     if (ctx.forcedShot) return ctx.forcedShot;
@@ -99,8 +114,9 @@
     const entries = [];
     for (const id of SHOT_IDS) {
       const s = SHOTS[id];
-      let w = (s.L[del.length] || 0) * (s.Ln[del.line] || 0) * (s.vs[kind] || 0) * gradeFactor(s.g, ctx.aggression);
+      let w = lenAff(s, del) * lnAff(s, del) * (s.vs[kind] || 0) * gradeFactor(s.g, ctx.aggression);
       if (!w) continue;
+      if (s.freq) w *= s.freq;
       for (const t of s.tags) if (mods[t]) w *= mods[t];
       if (id === 'leave' && ctx.format !== 'Test') w *= 0.35 * (1 - ctx.aggression) + 0.05;
       if (del.slower && s.g === 3) w *= 1.1;
@@ -118,20 +134,30 @@
     const line = rng.pick(ctx.plan.Ln);
     const slower = ctx.bowler.kind === 'pace' && rng.chance(ctx.slowerP);
     const variation = ctx.bowler.kind === 'spin' && rng.chance(ctx.bowler.spinType === 'wrist' ? 0.15 : 0.1);
-    return { length, line, slower, variation };
+    let fineLength = rng.pick(LENGTH_SPLIT[length]);
+    if (fineLength === 'bouncer' && ctx.bowler.kind === 'spin') fineLength = 'short'; // spinners bowl long hops, not bouncers
+    const fineLine = rng.pick(LINE_SPLIT[line]);
+    const base = ctx.bowler.kph || (ctx.bowler.kind === 'spin' ? 85 : 135);
+    let kph = rng.normal(base, ctx.bowler.kind === 'spin' ? 3.5 : 3.2);
+    if (slower) kph *= 0.8 + rng() * 0.06;
+    if (variation && ctx.bowler.spinType === 'finger') kph += 6; // arm ball / quicker one
+    return { length, line, fineLength, fineLine, slower, variation, kph: Math.round(kph) };
   }
 
   // ---------- execution ----------
   function failProbability(ctx, shotId, del) {
     const s = SHOTS[shotId];
     const pitch = ctx.pitch;
-    const aff = clamp((s.L[del.length] || 0.05) * (s.Ln[del.line] || 0.05), 0.04, 2);
+    const aff = clamp(Math.max(0.05, lenAff(s, del)) * Math.max(0.05, lnAff(s, del)), 0.04, 2);
     let p = s.risk * (1.25 / (0.4 + 0.6 * aff));
-    if (del.length === 'yorker' && s.g > 0) p *= 1.3;
+    if (del.fineLength === 'yorker' && s.g > 0) p *= 1.3;
+    if (del.fineLength === 'fulltoss') p *= 0.65; // gift
+    if (del.fineLength === 'bouncer' && (shotId === 'pull' || shotId === 'hook')) p *= 1.3;
+    if (del.fineLine === 'fifth' || del.fineLine === 'wide') p *= s.g >= 2 ? 1.08 : 0.9; // chasing wide ones
     const lofted = s.tags.includes('lofted');
     if (ctx.bowler.kind === 'pace') {
-      const move = pitch.seam * (ctx.newBall ? 1.2 : 0.9) * (0.65 + 0.35 * ctx.swing);
-      const spd = ctx.bowler.pace === 'fast' ? 1.08 : 0.95;
+      const move = pitch.seam * (ctx.newBall ? 1.2 : 0.9 * (pitch.reverse || 1)) * (0.65 + 0.35 * ctx.swing);
+      const spd = ctx.bowler.pace === 'fast' ? 1.08 * Math.sqrt(ctx.bowler.speed) : 0.95;
       p *= (0.45 + 0.55 * move) * spd;
       if (del.length === 'short' || del.length === 'back') p *= Math.pow(pitch.bounce, 0.6);
       if (ctx.angle === 'across' && (del.line === 'off' || del.line === 'wide')) p *= 1.06;
@@ -142,6 +168,8 @@
     }
     p *= Math.pow(pitch.variable, 0.35) * Math.pow(pitch.slow, lofted ? 0.7 : 0.25);
     if (ctx.batter.weak && ctx.batter.weak[del.length]) p *= ctx.batter.weak[del.length];
+    if (ctx.bowler.kind === 'spin' && ctx.batter.vsSpin) p *= ctx.batter.vsSpin;
+    if (ctx.bowler.kind === 'pace' && ctx.batter.vsPace && ctx.bowler.speed >= 1) p *= ctx.batter.vsPace * Math.sqrt(ctx.bowler.speed);
     p /= Math.pow(pitch.ease, 0.7) * ctx.batter.control;
     return clamp(p, 0.005, 0.85);
   }
@@ -203,7 +231,7 @@
     const s = SHOTS[shotId];
     const pf = powerFactor(ctx);
     const pace = ctx.bowler.kind === 'pace';
-    const fastness = pace ? (ctx.bowler.pace === 'fast' ? 1 : 0.72) : 0.35;
+    const fastness = pace ? (ctx.bowler.pace === 'fast' ? ctx.bowler.speed : 0.72) : 0.35;
     switch (kind) {
       case 'clean': {
         const theta = placeShot(prep, s, rng, ctx);
@@ -404,7 +432,7 @@
     const failed = rng.chance(pf);
 
     if (shot === 'leave') {
-      if (failed && (del.line === 'off' || del.line === 'stumps')) {
+      if (failed && ['fourth', 'offstump', 'middle', 'legstump'].includes(del.fineLine)) {
         ev.out = rng.chance(0.55) ? 'bowled' : 'lbw';
         ev.quality = 'leave';
       }
@@ -419,9 +447,16 @@
     if (kind === 'miss') {
       const pace = ctx.bowler.kind === 'pace';
       let pW = 0;
-      if (del.line === 'stumps') pW = 0.45 * Math.pow(ctx.pitch.variable, 0.4);
-      else if (del.line === 'pads') pW = !pace && ctx.turn === 'in' ? 0.16 : 0.08;
-      else if (del.line === 'off') pW = pace ? 0.07 * ctx.pitch.seam : (ctx.turn === 'in' ? 0.14 : 0.04);
+      const fl = del.fineLine;
+      const v = Math.pow(ctx.pitch.variable, 0.4);
+      if (fl === 'offstump') pW = 0.38 * v;
+      else if (fl === 'middle') pW = 0.52 * v;
+      else if (fl === 'legstump') pW = 0.36 * v;
+      else if (fl === 'downleg') pW = !pace && ctx.turn === 'in' ? 0.16 : 0.05;
+      else if (fl === 'fourth') pW = pace ? 0.08 * ctx.pitch.seam * (ctx.newBall ? 1 : (ctx.pitch.reverse || 1)) : (ctx.turn === 'in' ? 0.14 : 0.04);
+      else if (fl === 'fifth') pW = 0.02;
+      if (del.fineLength === 'yorker') pW *= 1.25;
+      if (del.fineLength === 'bouncer' || del.fineLength === 'short') pW *= 0.3;
       if (rng.chance(pW)) {
         ev.out = rng.chance(0.55) ? 'bowled' : 'lbw';
       } else if (!pace && prep.keeperUp && (s.g >= 3 || shot === 'loftedstraight') && rng.chance(0.5)) {
@@ -453,12 +488,22 @@
 
   // ---------- batch evaluation ----------
   function emptyStats() {
-    return { balls: 0, runs: 0, wkts: 0, dots: 0, singles: 0, twos: 0, threes: 0, fours: 0, sixes: 0, caught: 0, bowled: 0, lbw: 0, stumped: 0, drops: 0, chances: 0, edges: 0, byShot: {}, byFielder: {}, sectors: new Array(24).fill(0).map(() => ({ runs: 0, n: 0, boundaries: 0, outs: 0 })), wagon: [] };
+    return { cells: {}, log: [], balls: 0, runs: 0, wkts: 0, dots: 0, singles: 0, twos: 0, threes: 0, fours: 0, sixes: 0, caught: 0, bowled: 0, lbw: 0, stumped: 0, drops: 0, chances: 0, edges: 0, byShot: {}, byFielder: {}, sectors: new Array(24).fill(0).map(() => ({ runs: 0, n: 0, boundaries: 0, outs: 0 })), wagon: [] };
   }
 
-  function record(st, ev, keepWagon) {
+  function record(st, ev, keepWagon, keepLog) {
     st.balls++;
     const r = ev.runs;
+    // line × length cell, with the shots played in it
+    const ck = ev.del.fineLength + '|' + ev.del.fineLine;
+    const cell = (st.cells[ck] = st.cells[ck] || { n: 0, runs: 0, outs: 0, dots: 0, fours: 0, sixes: 0, shots: {} });
+    cell.n++; cell.runs += r;
+    if (ev.out) cell.outs++; else if (r === 0) cell.dots++; else if (r === 4) cell.fours++; else if (r === 6) cell.sixes++;
+    const cs = (cell.shots[ev.shot] = cell.shots[ev.shot] || { n: 0, runs: 0, outs: 0, fours: 0, sixes: 0 });
+    cs.n++; cs.runs += r; if (ev.out) cs.outs++; else if (r === 4) cs.fours++; else if (r === 6) cs.sixes++;
+    if (keepLog && st.log.length < keepLog) {
+      st.log.push({ i: st.balls, kph: ev.del.kph, len: ev.del.fineLength, line: ev.del.fineLine, slower: ev.del.slower, variation: ev.del.variation, shot: ev.shot, quality: ev.quality, runs: r, out: ev.out, theta: ev.theta, x: ev.x, y: ev.y, aerial: ev.aerial, fid: ev.fielder ? ev.fielder.id : null, dropped: !!ev.dropped, boundaryCatch: !!ev.boundaryCatch });
+    }
     st.runs += r;
     if (ev.out) {
       st.wkts++;
@@ -514,7 +559,7 @@
     const st = emptyStats();
     for (let i = 0; i < N; i++) {
       const rng = makeRng((seed + i * 2654435761) >>> 0);
-      record(st, simulateBall(prep, ctx, rng), opts.wagon || 0);
+      record(st, simulateBall(prep, ctx, rng), opts.wagon || 0, opts.log || 0);
     }
     return finalise(st, ctx);
   }
@@ -522,9 +567,9 @@
   /** Commentary-style description of a single event. */
   function describeEvent(ev, field, ctx) {
     const shot = SHOTS[ev.shot].name;
-    const lenNames = { yorker: 'yorker', full: 'full', good: 'good length', back: 'back of a length', short: 'short' };
-    const lineNames = { wide: 'wide outside off', off: 'outside off', stumps: 'on the stumps', pads: 'on the pads' };
-    let del = `${lenNames[ev.del.length]}, ${lineNames[ev.del.line]}`;
+    const len = (LENGTHS[ev.del.fineLength] || { name: ev.del.length }).name.toLowerCase();
+    const line = (LINES[ev.del.fineLine] || { name: ev.del.line }).name.toLowerCase();
+    let del = `${ev.del.kph ? ev.del.kph + ' km/h · ' : ''}${len}, ${line}${ev.del.fineLine === 'wide' || ev.del.fineLine === 'downleg' ? '' : ' line'}`;
     if (ev.del.slower) del = 'slower ball, ' + del;
     if (ev.del.variation) del = (ctx.bowler.spinType === 'wrist' ? "wrong'un" : 'arm ball') + ', ' + del;
     const fname = ev.fielder ? (ev.fielder.role === 'bowler' ? 'the bowler' : `${ev.fielder.name} at ${CFS.positionName(field.fielders.find((f) => f.id === ev.fielder.id) || { theta: 0, d: 20, role: 'fielder' }, ctx.ground, field.keeperMode)}`) : '';

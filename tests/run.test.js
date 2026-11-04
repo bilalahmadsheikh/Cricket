@@ -271,3 +271,55 @@ test('parser: zone moves relative to circle and boundary', () => {
   assert.equal(z('small boundaries').settings.ground, 'small');
   assert.equal(z('just move point to gully').from, 'point');
 });
+
+// ---------------- v1.2: fine deliveries, ball log, data ----------------
+test('every ball records a fine line, length, speed and shot', () => {
+  const ctx = C.buildContext(BASE);
+  const f = C.fieldFromPreset(C.PRESET_BY_ID.pace_pp_standard, ctx.ground);
+  const st = C.evaluateField(f, ctx, { balls: 1500, seed: 3, log: 200 });
+  assert.equal(st.log.length, 200);
+  for (const b of st.log) {
+    assert.ok(C.LINES[b.line], b.line);
+    assert.ok(C.LENGTHS[b.len], b.len);
+    assert.ok(C.SHOTS[b.shot], b.shot);
+    assert.ok(b.kph > 100 && b.kph < 165, 'pace speed ' + b.kph);
+  }
+  // cells add up to the total
+  const n = Object.values(st.cells).reduce((a, c) => a + c.n, 0);
+  assert.equal(n, st.balls);
+  const runs = Object.values(st.cells).reduce((a, c) => a + c.runs, 0);
+  assert.equal(runs, st.runs);
+  // shots within a cell add up
+  for (const c of Object.values(st.cells)) assert.equal(Object.values(c.shots).reduce((a, x) => a + x.n, 0), c.n);
+});
+
+test('full tosses go for more than yorkers; spinners never bowl bouncers', () => {
+  const ctx = C.buildContext(Object.assign({}, BASE, { phase: 'death' }));
+  const st = C.evaluateField(C.fieldFromPreset(C.PRESET_BY_ID.pace_death, ctx.ground), ctx, { balls: 8000, seed: 11 });
+  const agg = (len) => Object.entries(st.cells).filter(([k]) => k.startsWith(len + '|')).reduce((a, [, c]) => ({ n: a.n + c.n, r: a.r + c.runs }), { n: 0, r: 0 });
+  const ft = agg('fulltoss'), y = agg('yorker');
+  assert.ok(ft.r / ft.n > y.r / y.n, `full toss ${ft.r / ft.n} vs yorker ${y.r / y.n}`);
+  const sctx = C.buildContext(Object.assign({}, BASE, { bowlerType: 'rls', phase: 'middle' }));
+  const s2 = C.evaluateField(C.fieldFromPreset(C.PRESET_BY_ID.spin_away_t20, sctx.ground), sctx, { balls: 3000, seed: 2, log: 3000 });
+  assert.ok(!Object.keys(s2.cells).some((k) => k.startsWith('bouncer|')));
+  assert.ok(s2.log.every((b) => b.kph < 100));
+});
+
+test('expanded data: new shots, positions, bowlers, pitches, batters', () => {
+  for (const id of ['loftedon', 'whip', 'switchhit', 'chip']) assert.ok(C.SHOTS[id], id);
+  for (const id of ['shortmidon', 'shortmidoff', 'deepforwardsquare']) assert.ok(C.POS_BY_ID[id], id);
+  for (const id of ['rxf', 'lxf']) assert.ok(C.BOWLERS[id], id);
+  for (const id of ['abrasive', 'cracked']) assert.ok(C.PITCHES[id], id);
+  for (const id of ['finisher', 'weakspin', 'weakpace']) assert.ok(C.BATTERS[id], id);
+  const exp = evalPreset({ bowlerType: 'rxf', format: 'Test', phase: 'newball' }, 'pace_test_standard', 4000);
+  const med = evalPreset({ bowlerType: 'rmf', format: 'Test', phase: 'newball' }, 'pace_test_standard', 4000);
+  assert.ok(exp.wpo > med.wpo, 'express pace takes more wickets than medium');
+});
+
+test('parser: delivery questions', () => {
+  assert.equal(parse('what shot was that')[0].type, 'lastball');
+  assert.deepEqual(parse('what happens on 4th stump good length')[0], { type: 'cell', length: 'good', line: 'fourth' });
+  assert.equal(parse('shots against yorkers')[0].length, 'yorker');
+  assert.equal(parse('bowl yorkers')[0].settings.plan, 'yorkers');
+  assert.equal(parse('right arm express')[0].settings.bowlerType, 'rxf');
+});

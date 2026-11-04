@@ -23,6 +23,17 @@ If nobody is at the position you name, FieldCraft tells you who is nearest and d
 
 Common mishearings that are handled include "mid one", "long of", "find leg", "galley", "mid wicked", "square lake" and "3rd man".
 
+## Delivery analysis
+
+| Say | Answer |
+|---|---|
+| "what shot was that?" · "how did he get out?" | The last ball: speed, length, line, the shot played (and any edge or mistime), the result and where it went. |
+| "what happens on 4th stump good length?" | Runs per over and wickets for that delivery in the last simulation, the shots batters played to it, and which shots went for boundaries or got them out. A simulation runs first if needed. |
+| "shots against yorkers" · "what do they play on middle stump?" | The same breakdown across one length or one line. |
+
+Lines: wide (6th stump+), 5th stump, 4th stump / channel, off stump, middle, leg stump, down leg / at the body.
+Lengths: yorker, full toss, full, good length, back of a length, short / long hop, bouncer.
+
 ## Circle & boundary moves
 
 These moves keep the fielder's angle and change only their depth, measured against the real 30-yard circle and the rope.

@@ -56,6 +56,8 @@
     dusty: { name: 'Dusty / crumbling (day 4–5)', short: 'Dusty', pace: 0.85, bounce: 0.9, seam: 0.9, spin: 1.55, variable: 1.35, slow: 1.15, ease: 0.82, tip: 'Variable bounce: stumps-to-stumps, close catchers, LBW/bowled threat.' },
     bouncy: { name: 'Hard & bouncy (pace and carry)', short: 'Bouncy', pace: 1.22, bounce: 1.45, seam: 1.2, spin: 0.95, variable: 1.0, slow: 0.9, ease: 0.95, tip: 'Edges fly — deeper slips, gully, and short-ball traps.' },
     slow: { name: 'Slow & low (sluggish)', short: 'Slow', pace: 0.8, bounce: 0.78, seam: 0.8, spin: 1.2, variable: 1.3, slow: 1.45, ease: 0.86, tip: 'Mistimed lofts: long-on/long-off & straight catchers, cutters work.' },
+    abrasive: { name: 'Abrasive / dry square (reverse swing)', short: 'Abrasive', pace: 0.93, bounce: 0.92, seam: 0.95, spin: 1.2, variable: 1.15, slow: 1.1, ease: 0.92, reverse: 1.55, tip: 'Old ball reverses: pace bowlers attack the stumps late on; straight catchers and bowled/LBW.' },
+    cracked: { name: 'Cracked (uneven, late in a match)', short: 'Cracked', pace: 1.0, bounce: 1.05, seam: 1.3, spin: 1.3, variable: 1.6, slow: 1.05, ease: 0.78, tip: 'Cracks make bounce unpredictable: bowl stump-to-stump; bowled, LBW and gloved catches.' },
     damp: { name: 'Damp / sticky', short: 'Damp', pace: 0.9, bounce: 1.05, seam: 1.5, spin: 1.25, variable: 1.3, slow: 1.25, ease: 0.78, tip: 'Ball stops & seams: catchers in front and behind.' },
   };
 
@@ -74,14 +76,16 @@
   // ---------------- bowlers ----------------
   // turnToRH: which way stock ball turns relative to a RIGHT-handed batter.
   const BOWLERS = {
-    rf: { name: 'Right-arm fast', short: 'RF', arm: 'R', kind: 'pace', pace: 'fast', speed: 1.0, keeper: 'back' },
-    lf: { name: 'Left-arm fast', short: 'LF', arm: 'L', kind: 'pace', pace: 'fast', speed: 1.0, keeper: 'back' },
-    rmf: { name: 'Right-arm medium-fast', short: 'RMF', arm: 'R', kind: 'pace', pace: 'medium', speed: 0.82, keeper: 'back' },
-    lmf: { name: 'Left-arm medium-fast', short: 'LMF', arm: 'L', kind: 'pace', pace: 'medium', speed: 0.82, keeper: 'back' },
-    rob: { name: 'Right-arm off-spin', short: 'OB', arm: 'R', kind: 'spin', spinType: 'finger', turnToRH: 'in', speed: 0.5, keeper: 'up' },
-    lob: { name: 'Left-arm orthodox (left-arm finger/off spin)', short: 'SLA', arm: 'L', kind: 'spin', spinType: 'finger', turnToRH: 'away', speed: 0.5, keeper: 'up' },
-    rls: { name: 'Right-arm leg-spin', short: 'LB', arm: 'R', kind: 'spin', spinType: 'wrist', turnToRH: 'away', speed: 0.47, keeper: 'up' },
-    lls: { name: 'Left-arm wrist spin (left-arm leg spin)', short: 'LAWS', arm: 'L', kind: 'spin', spinType: 'wrist', turnToRH: 'in', speed: 0.47, keeper: 'up' },
+    rxf: { name: 'Right-arm express (150 km/h+)', short: 'RXF', arm: 'R', kind: 'pace', pace: 'fast', speed: 1.12, kph: 150, keeper: 'back' },
+    lxf: { name: 'Left-arm express (145 km/h+)', short: 'LXF', arm: 'L', kind: 'pace', pace: 'fast', speed: 1.1, kph: 146, keeper: 'back' },
+    rf: { name: 'Right-arm fast', short: 'RF', arm: 'R', kind: 'pace', pace: 'fast', speed: 1.0, kph: 140, keeper: 'back' },
+    lf: { name: 'Left-arm fast', short: 'LF', arm: 'L', kind: 'pace', pace: 'fast', speed: 1.0, kph: 138, keeper: 'back' },
+    rmf: { name: 'Right-arm medium-fast', short: 'RMF', arm: 'R', kind: 'pace', pace: 'medium', speed: 0.82, kph: 127, keeper: 'back' },
+    lmf: { name: 'Left-arm medium-fast', short: 'LMF', arm: 'L', kind: 'pace', pace: 'medium', speed: 0.82, kph: 126, keeper: 'back' },
+    rob: { name: 'Right-arm off-spin', short: 'OB', arm: 'R', kind: 'spin', spinType: 'finger', turnToRH: 'in', speed: 0.5, kph: 88, keeper: 'up' },
+    lob: { name: 'Left-arm orthodox (left-arm finger/off spin)', short: 'SLA', arm: 'L', kind: 'spin', spinType: 'finger', turnToRH: 'away', speed: 0.5, kph: 87, keeper: 'up' },
+    rls: { name: 'Right-arm leg-spin', short: 'LB', arm: 'R', kind: 'spin', spinType: 'wrist', turnToRH: 'away', speed: 0.47, kph: 82, keeper: 'up' },
+    lls: { name: 'Left-arm wrist spin (left-arm leg spin)', short: 'LAWS', arm: 'L', kind: 'spin', spinType: 'wrist', turnToRH: 'in', speed: 0.47, kph: 80, keeper: 'up' },
   };
 
   /** Turn of the stock ball relative to the batter on strike: 'in' | 'away' | null (pace). */
@@ -110,6 +114,9 @@
     legside: { name: 'Leg-side player (flicks & pulls)', aggression: 1, control: 1, power: 1, mods: { legside: 1.6, offside: 0.7 } },
     shortweak: { name: 'Vulnerable to the short ball', aggression: 1, control: 1, power: 1, mods: {}, weak: { short: 2.0 } },
     sweeper: { name: 'Sweeps & reverse-sweeps spin', aggression: 1.05, control: 1.02, power: 1, mods: { sweep: 2.4 } },
+    finisher: { name: 'Finisher (death-overs specialist)', aggression: 1.3, control: 1.0, power: 1.12, placement: 2, mods: { lofted: 1.4, sweep: 1.3 }, weak: { yorker: 0.75 } },
+    weakspin: { name: 'Struggles against spin', aggression: 1, control: 1, power: 1, mods: { sweep: 0.6 }, vsSpin: 1.5 },
+    weakpace: { name: 'Struggles against genuine pace', aggression: 1, control: 1, power: 1, mods: {}, vsPace: 1.45 },
     tail: { name: 'Lower order / tail-ender', aggression: 1.1, control: 0.7, power: 0.9, placement: 1, mods: { lofted: 1.2, defend: 1.1 } },
   };
 
@@ -174,8 +181,37 @@
     loftedstraight: { name: 'Lofted straight / down the ground', g: 3, theta: 0, sd: 13, type: 'aerial', power: 30, carry: 74, risk: 0.18, fam: 'loft', L: { yorker: 0.15, full: 1.3, good: 0.6, back: 0.2, short: 0 }, Ln: { wide: 0.1, off: 0.7, stumps: 1.1, pads: 0.5 }, vs: { pace: 1, spin: 1.35 }, tags: ['straight', 'lofted'] },
     loftedoff: { name: 'Inside-out over cover', g: 3, theta: 40, sd: 14, type: 'aerial', power: 29, carry: 68, risk: 0.2, fam: 'loft', L: { yorker: 0.1, full: 1.1, good: 0.6, back: 0.2, short: 0 }, Ln: { wide: 0.8, off: 1, stumps: 0.6, pads: 0.2 }, vs: { pace: 1, spin: 1.1 }, tags: ['offside', 'lofted'] },
     slog: { name: 'Slog over cow corner', g: 3, theta: -40, sd: 14, type: 'aerial', power: 30, carry: 75, risk: 0.22, fam: 'loft', L: { yorker: 0.15, full: 1, good: 1, back: 0.6, short: 0.3 }, Ln: { wide: 0.2, off: 0.6, stumps: 1, pads: 1.1 }, vs: { pace: 1, spin: 1.1 }, tags: ['legside', 'lofted'] },
+    loftedon: { name: 'Lofted on-drive', freq: 0.55, g: 3, theta: -14, sd: 10, type: 'aerial', power: 30, carry: 72, risk: 0.19, fam: 'loft', L: { yorker: 0.1, full: 1.1, good: 0.4, back: 0.1, short: 0 }, Ln: { wide: 0, off: 0.2, stumps: 1, pads: 1 }, vs: { pace: 1, spin: 1.2 }, tags: ['legside', 'lofted', 'straight'] },
+    whip: { name: 'Whip / flick over mid-wicket', freq: 0.55, g: 3, theta: -55, sd: 14, type: 'aerial', power: 29, carry: 70, risk: 0.2, fam: 'loft', L: { yorker: 0.5, full: 0.9, good: 0.6, back: 0.3, short: 0.1 }, Ln: { wide: 0, off: 0.05, stumps: 0.6, pads: 1.4 }, vs: { pace: 1, spin: 0.7 }, tags: ['legside', 'lofted'] },
+    switchhit: { name: 'Switch hit', freq: 0.5, g: 3, theta: 70, sd: 16, type: 'aerial', power: 26, carry: 62, risk: 0.27, fam: 'cross', L: { yorker: 0.05, full: 0.25, good: 0.25, back: 0.1, short: 0 }, Ln: { wide: 0.1, off: 0.3, stumps: 0.3, pads: 0.15 }, vs: { pace: 0.3, spin: 1 }, tags: ['offside', 'lofted', 'sweep'] },
+    chip: { name: 'Chip over the infield', freq: 0.45, g: 2, theta: 25, sd: 30, type: 'aerial', power: 20, carry: 42, risk: 0.14, fam: 'loft', L: { yorker: 0, full: 0.8, good: 0.6, back: 0.2, short: 0 }, Ln: { wide: 0.4, off: 0.8, stumps: 0.7, pads: 0.4 }, vs: { pace: 1, spin: 1 }, tags: ['lofted'] },
   };
 
+  // ---------- fine delivery model (7 lines × 7 lengths) ----------
+  // Each fine bucket blends the coarse affinities used by the shot table.
+  const LINES = {
+    wide: { name: 'Wide outside off', short: 'Wide', mix: { wide: 1 } },
+    fifth: { name: '5th stump', short: '5th', mix: { wide: 0.4, off: 0.6 } },
+    fourth: { name: '4th stump', short: '4th', mix: { off: 1 } },
+    offstump: { name: 'Off stump', short: 'Off', mix: { off: 0.45, stumps: 0.55 } },
+    middle: { name: 'Middle stump', short: 'Mid', mix: { stumps: 1 } },
+    legstump: { name: 'Leg stump', short: 'Leg', mix: { stumps: 0.55, pads: 0.45 } },
+    downleg: { name: 'Down leg / at the body', short: 'D.leg', mix: { pads: 1 } },
+  };
+  const LENGTHS = {
+    yorker: { name: 'Yorker', short: 'Yorker', mix: { yorker: 1 } },
+    fulltoss: { name: 'Full toss', short: 'F.toss', mix: { full: 1 } },
+    full: { name: 'Full', short: 'Full', mix: { full: 1 } },
+    good: { name: 'Good length', short: 'Good', mix: { good: 1 } },
+    back: { name: 'Back of a length', short: 'Back', mix: { back: 1 } },
+    short: { name: 'Short', short: 'Short', mix: { short: 1 } },
+    bouncer: { name: 'Bouncer', short: 'Bouncer', mix: { short: 1 } },
+  };
+  // How a coarse plan bucket splits into fine buckets.
+  const LINE_SPLIT = { wide: { wide: 1 }, off: { fifth: 0.35, fourth: 0.65 }, stumps: { offstump: 0.4, middle: 0.35, legstump: 0.25 }, pads: { downleg: 1 } };
+  const LENGTH_SPLIT = { yorker: { yorker: 0.92, fulltoss: 0.08 }, full: { full: 0.96, fulltoss: 0.04 }, good: { good: 1 }, back: { back: 1 }, short: { short: 0.55, bouncer: 0.45 } };
+
+  for (const [k, v] of Object.entries(SHOTS)) v.id = k;
   const SHOT_IDS = Object.keys(SHOTS);
 
   /** Aggression multiplier for a shot grade. */
@@ -189,7 +225,7 @@
   }
 
   Object.assign(CFS, {
-    FORMATS, PITCHES, OUTFIELDS, OVERHEAD, BOWLERS, BATTERS, PLANS, SHOTS, SHOT_IDS,
+    FORMATS, PITCHES, OUTFIELDS, OVERHEAD, BOWLERS, BATTERS, PLANS, SHOTS, SHOT_IDS, LINES, LENGTHS, LINE_SPLIT, LENGTH_SPLIT,
     turnFor, angleFor, autoPlan, gradeFactor,
   });
 })(typeof window !== 'undefined' ? window : globalThis);

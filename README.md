@@ -45,15 +45,17 @@ npm test
 
 | Area | What you get |
 |---|---|
-| **Field setting** | 45 named positions: slips 1–4, gully, fly slip, leg slip, silly point, short leg, the ring, sweepers and every boundary position. Drag-and-drop, tap-to-place, a per-fielder position picker, keyboard arrows, and snap-to-named-position. |
+| **Field setting** | 48 named positions: slips 1–4, gully, fly slip, leg slip, silly point, short leg, the ring, sweepers and every boundary position. Drag-and-drop, tap-to-place, a per-fielder position picker, keyboard arrows, and snap-to-named-position. |
 | **Voice control** | Natural phrasing. It repairs typos and mishearings by spelling and by sound, picks the most similar match, and suggests a command ("Did you mean…?") when it can't parse a phrase. You can move fielders relative to the circle ("third man inside the circle", "edge of the circle", "halfway to the boundary"). It copes with speech-recognition mistakes ("long on **2** mid on", "find leg", "galley"). You can chain commands with "and", rename fielders and refer to them by name, and turn on an optional wake word ("Captain, …"). It speaks its replies, and you can pick your accent (UK, India, Australia, Pakistan, South Africa, NZ, US). |
-| **Bowlers** | Fast, medium-fast, off-spin and leg-spin, each **left- or right-arm**. Bowl over or around the wicket. Spin is modelled as turning *into* or *away from* the batter, and pace as angling *across* or *into*. |
-| **Batters** | Right- or left-handed. Positions are batter-relative, so **every field mirrors automatically for a left-hander**. There are 8 batter profiles: power hitter, anchor, off-side or leg-side player, weak vs the short ball, sweeper and tail-ender. |
+| **Bowlers** | Express (150 km/h+), fast, medium-fast, off-spin and leg-spin, each **left- or right-arm**. Bowl over or around the wicket. Spin is modelled as turning *into* or *away from* the batter, and pace as angling *across* or *into*. |
+| **Batters** | Right- or left-handed. Positions are batter-relative, so **every field mirrors automatically for a left-hander**. There are 11 batter profiles: power hitter, anchor, finisher, off-side or leg-side player, weak vs the short ball, weak vs spin, weak vs pace, sweeper and tail-ender. |
 | **Phases & restrictions** | T10 (2-over powerplay with 2 out, then 5 out), T20 (powerplay, middle, death), ODI (PP1, middle, death) and Test (new ball, old ball, declaration). The 30-yard circle limits and the Law 28.4 limit (max 2 behind square on the leg side) are checked live, and illegal fielders are flagged. |
-| **Pitches & conditions** | Balanced, green seamer, flat road, dry turner, dusty/crumbling, hard & bouncy, slow & low, damp. You can also set overcast/humid skies, dew, new or old ball, outfield speed and boundary size. |
-| **Fields & traps** | 24 standard fields plus 14 traps: bouncer/hook, leg-side, drive bait, off-side stack, wide-yorker, leg-stump yorker, slower-ball, upper-cut, umbrella, sweep, reverse-sweep, googly, flight & dip, and ring field. Each one carries its matching bowling plan. |
+| **Pitches & conditions** | Balanced, green seamer, flat road, dry turner, dusty/crumbling, hard & bouncy, slow & low, damp, abrasive (reverse swing) and cracked. You can also set overcast/humid skies, dew, new or old ball, outfield speed and boundary size. |
+| **Fields & traps** | 27 standard fields plus 15 traps: bouncer/hook, leg-side, leg-stump whip, drive bait, off-side stack, wide-yorker, leg-stump yorker, slower-ball, upper-cut, umbrella, sweep, reverse-sweep, googly, flight & dip, and ring field. Each one carries its matching bowling plan. |
+| **Delivery detail** | Every ball has a speed in km/h, one of 7 **lines** (wide, 5th stump, 4th stump, off, middle, leg, down leg) and one of 7 **lengths** (yorker, full toss, full, good, back of a length, short, bouncer). It records the **shot played**, the edge or mistime if there was one, the result and where the ball went, e.g. *"138 km/h full, 4th stump → inside-out over cover → FOUR through deep cover"*. |
+| **Line & length map** | A 7 × 7 grid of runs per over and wickets. Click any cell to see which shots batters played to that delivery and which ones went for 4, 6 or got them out. Also shows the deliveries and shots that produced the most boundaries and wickets, plus a filterable ball-by-ball log. |
 | **Simulation** | You can bowl a single animated ball with commentary, bowl an over, or simulate 600–12,000 balls. Results include a run heat-map (danger zones), a wagon wheel, dismissal mix, shot breakdown, fielder workload and plain-English insights ("28% of boundaries leak through long-off"). |
-| **Shot focus** | Test a field against one shot: cover drive, pull, sweep, reverse sweep, ramp and 20 others. |
+| **Shot focus** | Test a field against one shot: cover drive, pull, sweep, reverse sweep, ramp, switch hit, whip over mid-wicket and 22 others (29 in total). |
 | **Analytics** | **Rank fields** ranks every suitable field and trap for the current conditions. **Pitch matrix** shows which field is best on each pitch type. **Optimise** runs a greedy search that moves one fielder at a time and checks the result on fresh deliveries. You can set the objective to balanced, take wickets, or stop runs. |
 | **Workflow** | Undo/redo, save named fields, export/import JSON, PNG export, printable field card, shareable link and light/dark mode. Works on phones and tablets. |
 
@@ -71,6 +73,7 @@ npm test
 | Bowler | "right arm leg spinner" · "left arm orthodox" · "left arm fast" · "medium pacer" · "around the wicket" |
 | Conditions | "green pitch" · "the pitch is dusty" · "flat track" · "overcast" · "dew" · "fast outfield" · "small boundaries" |
 | Plan / batter | "bowl short" · "bowl yorkers" · "fourth stump channel" · "power hitter batter" |
+| Delivery analysis | "what shot was that?" · "what happens on 4th stump good length?" · "shots against yorkers" · "what do they play on middle stump short?" |
 | Simulate | "bowl" · "bowl an over" · "simulate 1000 balls" · "simulate cover drive" · "simulate 5 overs of pull shots" |
 | Statistics | "which field is best?" · "compare pitches" · "optimise the field" → "apply" · "analyse this field" |
 | Info / view | "where is mid on?" · "read the field" · "is the field legal?" · "zoom in" · "show heatmap" · "dark mode" · "undo" · "help" |

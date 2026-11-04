@@ -217,6 +217,32 @@ select:focus, input:focus, button:focus-visible { outline: 2px solid var(--accen
 .sugg { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 4px 10px; margin: 2px; cursor: pointer; font-size: 12px; }
 .sugg:hover { border-color: var(--accent); color: var(--accent-2); }
 
+/* ---------- delivery analysis ---------- */
+.ball-feed { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; max-height: 220px; overflow: auto; }
+.ball-feed:empty { display: none; }
+.ball-feed li span { margin-right: 4px; }
+.ball-feed .bf-del { color: var(--muted); }
+.ball-feed .bf-shot { color: var(--text); font-weight: 600; }
+.ball-feed li.four b, .ball-log .four { color: #1c7ed6; }
+.ball-feed li.six b, .ball-log .six { color: #9c36b5; }
+.ball-feed li.w b, .ball-log .w { color: var(--danger); }
+.llm-wrap { overflow-x: auto; }
+.llm { border-collapse: separate; border-spacing: 2px; font-size: 11px; width: 100%; }
+.llm th { color: var(--muted); font-weight: 700; padding: 2px; text-align: center; white-space: nowrap; }
+.llm td { background: hsl(var(--h) 60% 50% / .25); border-radius: 5px; text-align: center; padding: 4px 2px; cursor: pointer; min-width: 38px; }
+.llm td b { display: block; font-size: 12px; }
+.llm td small { color: var(--muted); }
+.llm td.empty { background: var(--panel-2); color: var(--muted); cursor: default; }
+.llm td.sel, .llm td:hover { outline: 2px solid var(--accent); }
+.cell-detail:empty { display: none; }
+.cell-detail { background: var(--panel-2); border-radius: 9px; padding: 8px 10px; font-size: 12px; }
+.cell-detail p { margin: 4px 0 6px; }
+.log-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.log-filters select { width: auto; flex: 1 1 110px; padding: 5px 7px; font-size: 12px; }
+.ball-log-wrap { max-height: 320px; overflow: auto; }
+.ball-log td { white-space: nowrap; }
+.combos { align-items: start; }
+
 /* ---------- command bar ---------- */
 .command-bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;

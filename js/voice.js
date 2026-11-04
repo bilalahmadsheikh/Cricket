@@ -13,7 +13,7 @@
 
   // ---------------- normalisation ----------------
   const REPLACEMENTS = [
-    [/\b1st\b/g, 'first'], [/\b2nd\b/g, 'second'], [/\b3rd\b/g, 'third'], [/\b4th\b/g, 'fourth'],
+    [/\b1st\b/g, 'first'], [/\b2nd\b/g, 'second'], [/\b3rd\b/g, 'third'], [/\b4th\b/g, 'fourth'], [/\b5th\b/g, 'fifth'], [/\b6th\b/g, 'sixth'],
     [/\bt ?10s?\b|\bt ten\b|\bten ten\b|\b(ten|10) over (game|match|cricket|format|league)\b/g, 't10'],
     [/\b(fielder|player|number|no|man) (one|two|three|four|five|six|seven|eight|nine)\b/g, (m, a, b) => `${a} ${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'].indexOf(b) + 1}`],
     [/\bthirty yards?\b|\b30 yards?\b/g, '30 yard'],
@@ -124,6 +124,26 @@
     return best && best.score >= 0.7 ? best : null;
   }
 
+  // ---------------- delivery vocab (line & length) ----------------
+  function detectDelivery(s) {
+    let length = null, line = null;
+    if (/\bfull toss(es)?\b|\bbeamer\b/.test(s)) length = 'fulltoss';
+    else if (/\byorkers?\b|\bblock hole\b/.test(s)) length = 'yorker';
+    else if (/\bbouncers?\b|\bbumpers?\b/.test(s)) length = 'bouncer';
+    else if (/\b(back of (a )?length|short of (a )?length|hard length)\b/.test(s)) length = 'back';
+    else if (/\b(good length|length ball|on a length|good)\b/.test(s)) length = 'good';
+    else if (/\b(short|long hops?)\b/.test(s)) length = 'short';
+    else if (/\b(full|half volley|overpitched)\b/.test(s)) length = 'full';
+    if (/\b(wide outside off|wide line|wide of off|sixth stump|wide)\b/.test(s)) line = 'wide';
+    else if (/\bfifth stump\b/.test(s)) line = 'fifth';
+    else if (/\b(fourth stump|channel|corridor( of uncertainty)?|outside off)\b/.test(s)) line = 'fourth';
+    else if (/\boff stump\b/.test(s)) line = 'offstump';
+    else if (/\b(middle stump|middle|at the stumps|stump to stump)\b/.test(s)) line = 'middle';
+    else if (/\bleg stump\b/.test(s)) line = 'legstump';
+    else if (/\b(down leg|down the leg side|at the body|into the body|on the pads|leg side)\b/.test(s)) line = 'downleg';
+    return { length, line };
+  }
+
   // ---------------- settings vocab ----------------
   function detectBowler(s, currentArm) {
     let arm = /\bleft arm\b|\bleftie\b|\blefty\b/.test(s) ? 'L' : /\bright arm\b/.test(s) ? 'R' : null;
@@ -133,11 +153,12 @@
     else if (/\bleg spin\b|\bgoogly\b/.test(s)) type = 'ls';
     else if (/\boff spin\b|\bfinger spin\b|\bdoosra\b/.test(s)) type = 'ob';
     else if (/\bmedium fast\b|\bseam(er|ers)?\b|\bswing bowler\b|\bdibbly\b/.test(s)) type = 'mf';
-    else if (/\bfast\b|\bquick\b|\bexpress\b|\bpace(man|r)?\b|\bfast bowler\b|\bspeedster\b/.test(s)) type = 'f';
+    else if (/\bexpress\b|\bvery fast\b|\b150\b|\btearaway\b/.test(s)) type = 'xf';
+    else if (/\bfast\b|\bquick\b|\bpace(man|r)?\b|\bfast bowler\b|\bspeedster\b/.test(s)) type = 'f';
     else if (/\bspin(ner)?\b/.test(s)) type = 'ob';
     if (!type) return null;
     arm = arm || currentArm || 'R';
-    const map = { f: { R: 'rf', L: 'lf' }, mf: { R: 'rmf', L: 'lmf' }, ob: { R: 'rob', L: 'lob' }, ls: { R: 'rls', L: 'lls' } };
+    const map = { xf: { R: 'rxf', L: 'lxf' }, f: { R: 'rf', L: 'lf' }, mf: { R: 'rmf', L: 'lmf' }, ob: { R: 'rob', L: 'lob' }, ls: { R: 'rls', L: 'lls' } };
     return map[type][arm];
   }
 
@@ -320,6 +341,13 @@
     if (/^(set|use|load|apply|give me|put up|go with)( me)? (the )?(best|recommended|optimal|statistically best) field\b/.test(s)) return { type: 'recommend', apply: true };
     if (/\b(best field|recommend|which field|what field|suggest(ion)?( a)?( field)?|compare (the )?fields|rank (the )?fields|statistically|what should i set)\b/.test(s)) return { type: 'recommend' };
     if (/^(analyse|evaluate|assess|rate|score|how good is|how is|stats|statistics)\b/.test(s)) return { type: 'analyse' };
+
+    // --- delivery analysis: "what shot was that", "what happens on fourth stump good length" ---
+    if (/^(what|which) (shot|stroke)( was| did)|^(what happened|last ball|replay|describe (the )?last ball|how did (he|she|they|the batter) get out|how was (that|he|she) out|what was that)\b/.test(s)) return { type: 'lastball' };
+    if (/^(what|which|how|shots?|strokes?|show|tell|analyse|analysis|where)\b/.test(s)) {
+      const dl = detectDelivery(s);
+      if (dl.length || dl.line) return Object.assign({ type: 'cell' }, dl);
+    }
 
     // --- info ---
     if ((m = s.match(/^(?:where is|where s|wheres|find|who is at|whos at|who s at|who is) (.+)$/))) return { type: 'where', ref: m[1] };
@@ -604,5 +632,5 @@
     }
   }
 
-  Object.assign(CFS, { parseCommand, repairCommand: repair, normaliseCommand: normalise, matchPreset, matchShot, detectBowler, VoiceControl });
+  Object.assign(CFS, { parseCommand, detectDelivery, repairCommand: repair, normaliseCommand: normalise, matchPreset, matchShot, detectBowler, VoiceControl });
 })(typeof window !== 'undefined' ? window : globalThis);

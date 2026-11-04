@@ -1,5 +1,5 @@
 /* Offline cache for FieldCraft (cache-first for app shell, network fallback). */
-const CACHE = 'fieldcraft-v2';
+const CACHE = 'fieldcraft-v3';
 const ASSETS = [
   './', './index.html', './css/styles.css', './manifest.webmanifest', './assets/icon.svg',
   './js/core.js', './js/positions.js', './js/conditions.js', './js/presets.js', './js/field.js',
