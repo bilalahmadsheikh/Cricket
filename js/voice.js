@@ -289,7 +289,7 @@
     }
 
     // --- add a catcher: "add a slip", "bring in a short leg" ---
-    if ((m = s.match(/^(?:add|bring in|put in|get in|i want|give me|need)(?: a| an| another| one more| me a)? (.+)$/))) {
+    if ((m = s.match(/^(?:(?:add|bring in|put in|get in|i want|give me|need)(?: a| an| another| one more| me a)?|a|an|another|one more) (.+)$/))) {
       const tgt = m[1].replace(/^(the) /, '');
       if (!/ to | at /.test(` ${tgt} `) && env.scorePosition(tgt) >= 0.8) return { type: 'add', to: tgt };
     }
@@ -370,7 +370,7 @@
     }
 
     // bowling plan: "bowl short", "bowl yorkers", "plan wide"
-    if (/^(bowl|bowling plan|plan|line|attack|target)\b|\bbowl(ing)? (short|yorkers|wide|full|straight|at the)/.test(s) || /\b(bouncers?|yorkers?|fourth stump|4th stump|channel|stump to stump|into the body|toss it up|flight it|darts)\b/.test(s)) {
+    if (/\bauto plan\b|^(bowl|bowling plan|plan|line|attack|target)\b|\bbowl(ing)? (short|yorkers|wide|full|straight|at the)/.test(s) || /\b(bouncers?|yorkers?|fourth stump|4th stump|channel|stump to stump|into the body|toss it up|flight it|darts)\b/.test(s)) {
       if (/\b(short|bouncers?|bumpers?|hit the deck)\b/.test(s)) settings.plan = 'short';
       else if (/\bwide (yorkers?|line|outside)\b|\bwide\b/.test(s)) settings.plan = 'wide';
       else if (/\byorkers?\b|\bblock hole\b/.test(s)) settings.plan = 'yorkers';
