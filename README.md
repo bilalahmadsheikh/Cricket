@@ -6,6 +6,12 @@ Runs entirely in the browser: no build step, no external dependencies, works off
 
 ![FieldCraft](assets/icon.svg)
 
+## Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fbilalahmadsheikh%2FCricket)
+
+It's a static site with no build step. In Vercel choose **Add New → Project**, import this repo, keep the defaults (Framework: *Other*, no build command, output directory `.`) and deploy. Vercel serves over HTTPS, so the microphone works.
+
 ## Quick start
 
 ```bash
