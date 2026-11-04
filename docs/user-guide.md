@@ -14,7 +14,7 @@ This guide walks through FieldCraft screen by screen. For the full list of spoke
 
 ## 1. Set the situation
 
-1. Pick **Format** and **Phase**. The note under them shows the fielding restriction that applies.
+1. Pick **Format** and **Phase**. The formats are T10, T20, ODI and Test. T10 has a 2-over powerplay with at most 2 fielders outside the circle, then 5 are allowed. The note under the selectors shows the restriction that applies.
 2. Pick the **Bowler type** and whether they bowl over or around the wicket. The note underneath tells you whether the ball turns or angles *into* or *away from* the batter.
 3. Pick the batter's **hand** and **profile**.
 4. Pick the **pitch** and the other conditions. A one-line tactical tip appears under the pitch.
@@ -29,7 +29,7 @@ You can move fielders in any of these ways:
 - **Tap** a fielder, then **tap a spot** on the field. This works well on phones and tablets.
 - In the **Fielders tab**, choose a position from a fielder's dropdown. You can also type a name for each player.
 - Select a fielder with Tab and move it with the **arrow keys**. Hold Shift for bigger steps.
-- Use your **voice**, e.g. "move long-on to mid-on".
+- Use your **voice**, e.g. "move long-on to mid-on". You can also move fielders relative to the circle: "move third man inside the circle", "put point on the edge of the circle", "long-on halfway between the circle and the boundary".
 
 To load a ready-made field, use the **Field** dropdown at the top. It's grouped into fields recommended for this situation, traps, other fields for this bowler, and your saved fields. Loading a trap also sets the bowling plan that goes with it.
 

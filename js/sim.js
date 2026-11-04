@@ -285,7 +285,7 @@
   function runsFromTime(t, throwDist, ctx) {
     const total = t + 0.6 + throwDist / THROW_SPEED;
     // white-ball batters run harder; quicker singles when attacking
-    const first = ({ T20: 3.0, ODI: 3.15, Test: 3.45 }[ctx.format] || 3.2) - 0.35 * ctx.aggression;
+    const first = ({ T10: 2.9, T20: 3.0, ODI: 3.15, Test: 3.45 }[ctx.format] || 3.2) - 0.35 * ctx.aggression;
     if (total < first) return 0;
     return Math.min(3, 1 + Math.floor((total - first) / 3.0));
   }

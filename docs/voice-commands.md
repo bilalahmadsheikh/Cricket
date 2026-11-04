@@ -23,6 +23,28 @@ If nobody is at the position you name, FieldCraft tells you who is nearest and d
 
 Common mishearings that are handled include "mid one", "long of", "find leg", "galley", "mid wicked", "square lake" and "3rd man".
 
+## Circle & boundary moves
+
+These moves keep the fielder's angle and change only their depth, measured against the real 30-yard circle and the rope.
+
+| Say | Result |
+|---|---|
+| "move third man **inside the circle**" | Moves to the named ring position at that angle (third man → short third man). If there's no named position, the fielder goes just inside the circle. |
+| "move short third man **outside the circle**" | Moves to the named deep position at that angle (short third man → third man). If there's no named position, the fielder goes to the boundary. |
+| "put point **on the edge of the circle**" · "just inside the ring" | Moves to just inside the 30-yard line. |
+| "fine leg **just outside the circle**" | Moves to about 3 m outside the line. |
+| "move mid-off to the **middle of the circle**" | Moves halfway between the bat and the circle. |
+| "put long-on **in the middle of the circle and boundary**" · "halfway between the circle and the boundary" | Moves halfway between the circle and the rope. |
+| "send square leg **to the boundary**" · "to the rope" | Moves onto the boundary. |
+
+## Forgiving language
+
+- **Typos and mishearings are repaired.** Unknown words are matched to the closest known word by spelling or by sound. For example, "mvoe the pitch to grene" becomes "move the pitch to green", and "wich feild is best" becomes "which field is best". The app tells you what it understood.
+- **The most similar match wins.** Names like "thurd man", "scare leg", "long gone" and "cover pint" resolve to the closest position.
+- **When nobody stands at a position**, the nearest fielder is used. For example, "move long on to mid on" with no long-on uses the closest fielder, and the app says who it moved. Say "undo" if that's not what you meant.
+- **Numbers can be spoken as words:** "fielder three", "number five".
+- **If a phrase isn't understood**, the app suggests the closest command ("Did you mean …?"). Say **"yes"** to run it.
+
 ## Commands
 
 | Category | Examples | What happens |
@@ -34,7 +56,7 @@ Common mishearings that are handled include "mid one", "long of", "find leg", "g
 | Keeper | "keeper up" · "keeper back" · "stand up" | |
 | Fields | "load the death field" · "powerplay field" · "ring field" · "reset field" · "mirror field" | |
 | Traps | "bouncer trap" · "leg side trap" · "drive trap" · "off side stack" · "wide yorker trap" · "leg stump yorker trap" · "slower ball trap" · "upper cut trap" · "umbrella" · "sweep trap" · "reverse sweep trap" · "googly trap" · "flight trap" | The trap's field and its bowling plan are both loaded. |
-| Format & phase | "T20" · "twenty twenty" · "ODI" · "one day" · "test match" · "powerplay" · "outside the powerplay" · "middle overs" · "death overs" · "new ball" · "old ball" | |
+| Format & phase | "T10" · "ten over match" · "T20" · "twenty twenty" · "ODI" · "one day" · "test match" · "powerplay" · "outside the powerplay" · "middle overs" · "death overs" · "new ball" · "old ball" | |
 | Batter | "left hander" · "right hander" · "switch batter" · "power hitter batter" · "anchor batter" · "tail ender batter" · "batter weak against the short ball" | |
 | Bowler | "right arm fast" · "left arm fast" · "medium pacer" · "left arm medium fast" · "off spinner" · "left arm orthodox" · "right arm leg spinner" · "chinaman" · "around the wicket" · "over the wicket" | |
 | Pitch | "green pitch" · "flat track" · "it's a turner" · "the pitch is dusty" · "bouncy pitch" · "slow pitch" · "damp pitch" · "balanced pitch" | |

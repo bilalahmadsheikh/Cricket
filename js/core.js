@@ -116,6 +116,15 @@
     const p = toXY(theta, d);
     return insideRing(p.x, p.y);
   }
+  /** distance from the striker to the edge of the 30-yard circle along theta */
+  function ringDist(theta) {
+    let lo = 0, hi = 90;
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      if (insideRingPolar(theta, mid)) lo = mid; else hi = mid;
+    }
+    return lo;
+  }
 
   // ---------- misc ----------
   function deepClone(o) {
@@ -150,7 +159,7 @@
   Object.assign(CFS, {
     PITCH_LEN, RING_RADIUS, CLOSE_RADIUS, DEG,
     makeRng, clamp, lerp, normAngle, angDiff, toXY, fromXY, dist,
-    makeGround, boundaryDist, insideRing, insideRingPolar,
+    makeGround, boundaryDist, insideRing, insideRingPolar, ringDist,
     deepClone, levenshtein, similarity, fmt, pct, titleCase,
   });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -222,3 +222,52 @@ test('parser: presets, sim, analytics, info', () => {
   assert.equal(parse('undo')[0].type, 'undo');
   assert.equal(parse('blah blah nonsense').length, 0);
 });
+
+// ---------------- v1.1: T10, zones, fuzzy matching ----------------
+test('T10 format: 2-over powerplay with 2 out, then 5 out', () => {
+  const t10 = C.FORMATS.T10.phases;
+  assert.equal(t10.powerplay.maxOut, 2);
+  assert.match(t10.powerplay.name, /1–2/);
+  assert.equal(t10.middle.maxOut, 5);
+  assert.equal(t10.death.maxOut, 5);
+  const g = C.makeGround('medium');
+  const death = C.fieldFromPreset(C.PRESET_BY_ID.pace_death, g);
+  assert.equal(C.checkRules(death, { format: 'T10', phase: 'powerplay' }, g).ok, false);
+  assert.equal(C.checkRules(death, { format: 'T10', phase: 'middle' }, g).ok, true);
+  // T10 reuses T20 fields
+  assert.ok(C.presetsFor(C.buildContext(Object.assign({}, BASE, { format: 'T10' })), { minFit: 3 }).length > 0);
+  const st = evalPreset({ format: 'T10', phase: 'middle' }, 'pace_t20_middle', 3000);
+  const t20 = evalPreset({ format: 'T20', phase: 'middle' }, 'pace_t20_middle', 3000);
+  assert.ok(st.rpo > t20.rpo, 'T10 batters should score faster');
+});
+
+test('ring distance follows the 30-yard circle shape', () => {
+  assert.ok(Math.abs(C.ringDist(90) - C.RING_RADIUS) < 0.05);
+  assert.ok(Math.abs(C.ringDist(180) - C.RING_RADIUS) < 0.05);
+  assert.ok(Math.abs(C.ringDist(0) - (C.PITCH_LEN + C.RING_RADIUS)) < 0.05);
+});
+
+test('fuzzy/phonetic position matching', () => {
+  for (const [k, v] of [['third maan', 'thirdman'], ['thurd man', 'thirdman'], ['long gone', 'longon'], ['cover pint', 'coverpoint'], ['sily point', 'sillypoint'], ['extra cove', 'extracover']]) {
+    assert.equal(C.matchPosition(k).id, v, k);
+  }
+  assert.equal(C.matchPosition('long off').id, 'longoff');
+  assert.equal(C.matchPosition('long on').id, 'longon');
+});
+
+test('parser: zone moves relative to circle and boundary', () => {
+  const z = (t) => parse(t)[0];
+  assert.deepEqual(z('move third maan inside the circle'), { type: 'zone', ref: 'third maan', zone: 'inside' });
+  assert.equal(z('move short third man outside the circle').zone, 'outside');
+  assert.equal(z('put point on the edge of the circle').zone, 'edge');
+  assert.equal(z('fine leg just outside the circle').zone, 'justout');
+  assert.equal(z('move mid off to the middle of the circle').zone, 'mid');
+  const b = z('put long on in the middle of the circle and boundary');
+  assert.equal(b.zone, 'between'); assert.equal(b.ref, 'long on');
+  assert.equal(z('send fine leg to the boundary').zone, 'boundary');
+  assert.equal(z('move fielder three to gully').from, 'fielder 3');
+  assert.equal(z('T10').settings.format, 'T10');
+  assert.equal(z('ten over match').settings.format, 'T10');
+  assert.equal(z('small boundaries').settings.ground, 'small');
+  assert.equal(z('just move point to gully').from, 'point');
+});

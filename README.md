@@ -46,10 +46,10 @@ npm test
 | Area | What you get |
 |---|---|
 | **Field setting** | 45 named positions: slips 1–4, gully, fly slip, leg slip, silly point, short leg, the ring, sweepers and every boundary position. Drag-and-drop, tap-to-place, a per-fielder position picker, keyboard arrows, and snap-to-named-position. |
-| **Voice control** | Natural phrasing that copes with speech-recognition mistakes ("long on **2** mid on", "find leg", "galley"). You can chain commands with "and", rename fielders and refer to them by name, and turn on an optional wake word ("Captain, …"). It speaks its replies, and you can pick your accent (UK, India, Australia, Pakistan, South Africa, NZ, US). |
+| **Voice control** | Natural phrasing. It repairs typos and mishearings by spelling and by sound, picks the most similar match, and suggests a command ("Did you mean…?") when it can't parse a phrase. You can move fielders relative to the circle ("third man inside the circle", "edge of the circle", "halfway to the boundary"). It copes with speech-recognition mistakes ("long on **2** mid on", "find leg", "galley"). You can chain commands with "and", rename fielders and refer to them by name, and turn on an optional wake word ("Captain, …"). It speaks its replies, and you can pick your accent (UK, India, Australia, Pakistan, South Africa, NZ, US). |
 | **Bowlers** | Fast, medium-fast, off-spin and leg-spin, each **left- or right-arm**. Bowl over or around the wicket. Spin is modelled as turning *into* or *away from* the batter, and pace as angling *across* or *into*. |
 | **Batters** | Right- or left-handed. Positions are batter-relative, so **every field mirrors automatically for a left-hander**. There are 8 batter profiles: power hitter, anchor, off-side or leg-side player, weak vs the short ball, sweeper and tail-ender. |
-| **Phases & restrictions** | T20 (powerplay, middle, death), ODI (PP1, middle, death) and Test (new ball, old ball, declaration). The 30-yard circle limits and the Law 28.4 limit (max 2 behind square on the leg side) are checked live, and illegal fielders are flagged. |
+| **Phases & restrictions** | T10 (2-over powerplay with 2 out, then 5 out), T20 (powerplay, middle, death), ODI (PP1, middle, death) and Test (new ball, old ball, declaration). The 30-yard circle limits and the Law 28.4 limit (max 2 behind square on the leg side) are checked live, and illegal fielders are flagged. |
 | **Pitches & conditions** | Balanced, green seamer, flat road, dry turner, dusty/crumbling, hard & bouncy, slow & low, damp. You can also set overcast/humid skies, dew, new or old ball, outfield speed and boundary size. |
 | **Fields & traps** | 24 standard fields plus 14 traps: bouncer/hook, leg-side, drive bait, off-side stack, wide-yorker, leg-stump yorker, slower-ball, upper-cut, umbrella, sweep, reverse-sweep, googly, flight & dip, and ring field. Each one carries its matching bowling plan. |
 | **Simulation** | You can bowl a single animated ball with commentary, bowl an over, or simulate 600–12,000 balls. Results include a run heat-map (danger zones), a wagon wheel, dismissal mix, shot breakdown, fielder workload and plain-English insights ("28% of boundaries leak through long-off"). |
@@ -64,9 +64,10 @@ npm test
 | Move | "move long on to mid on" · "put fine leg at short fine leg" · "third man to second slip" · "move fielder 3 to gully" · "move Smith to deep mid-wicket" |
 | Adjust | "bring mid-off up" · "push fine leg back" · "move point a bit squarer" · "cover finer" · "keeper up" |
 | Add a catcher | "add a slip" · "bring in a short leg". The simulator picks the fielder whose move costs the least. |
+| Circle / boundary | "move third man inside the circle" · "short third man outside the circle" · "point on the edge of the circle" · "mid-off to the middle of the circle" · "long-on halfway between the circle and the boundary" · "square leg to the boundary" |
 | Swap / mirror | "swap point and cover" · "mirror field" |
 | Fields & traps | "load the death field" · "bouncer trap" · "sweep trap" · "wide yorker trap" · "ring field" · "load the best field" |
-| Situation | "T20" · "one day" · "test match" · "powerplay" · "outside the powerplay" · "death overs" · "left hander" · "switch batter" |
+| Situation | "T10" · "T20" · "one day" · "test match" · "powerplay" · "outside the powerplay" · "death overs" · "left hander" · "switch batter" |
 | Bowler | "right arm leg spinner" · "left arm orthodox" · "left arm fast" · "medium pacer" · "around the wicket" |
 | Conditions | "green pitch" · "the pitch is dusty" · "flat track" · "overcast" · "dew" · "fast outfield" · "small boundaries" |
 | Plan / batter | "bowl short" · "bowl yorkers" · "fourth stump channel" · "power hitter batter" |

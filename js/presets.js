@@ -154,7 +154,9 @@
     if (p.pace && b.kind === 'pace' && p.pace !== b.pace) return 0.5;
     if (p.turn && b.kind === 'spin' && p.turn !== CFS.turnFor(ctx.bowlerType, ctx.hand)) return 0;
     let s = 1;
-    if (p.formats.includes(ctx.format)) s += 1;
+    // T10 uses the same tactical fields as T20 (same restrictions after the powerplay)
+    const fmt = ctx.format === 'T10' ? 'T20' : ctx.format;
+    if (p.formats.includes(fmt)) s += 1;
     if (p.phases.includes(ctx.phase)) s += 1;
     return s;
   }

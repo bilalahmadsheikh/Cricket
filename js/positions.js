@@ -135,29 +135,48 @@
   const ALIAS_INDEX = [];
   for (const p of POSITIONS) {
     const set = new Set([normaliseText(p.name), ...p.aliases.map(normaliseText)]);
-    for (const a of set) ALIAS_INDEX.push({ alias: a, compact: a.replace(/ /g, ''), id: p.id });
+    for (const a of set) ALIAS_INDEX.push({ alias: a, compact: a.replace(/ /g, ''), phon: phonetic(a), id: p.id });
   }
 
   /**
    * Fuzzy-match a phrase to a fielding position.
    * Returns {id, score} with score in [0,1] or null.
    */
-  function matchPosition(phrase) {
-    const n = normaliseText(phrase).replace(/^(the|a|an|at|to) /, '').replace(/ (position|spot|please)$/, '');
+  /**
+   * Fuzzy-match a phrase to a fielding position.
+   * Combines exact alias, edit-distance and a phonetic key (so speech
+   * errors like "third maan", "mid one", "fine lake" still resolve).
+   * Returns {id, score} with score in [0,1] or null. opts.min lowers the
+   * acceptance threshold for "best guess" matching.
+   */
+  function matchPosition(phrase, opts = {}) {
+    const n = normaliseText(phrase).replace(/^(the|a|an|at|to) /, '').replace(/ (position|spot|please|fielder|man)$/, '');
     if (!n) return null;
     const c = n.replace(/ /g, '');
+    const ph = phonetic(n);
     let best = null;
     for (const e of ALIAS_INDEX) {
       let s;
       if (e.alias === n || e.compact === c) s = 1;
-      else s = similarity(e.compact, c) * 0.97;
+      else {
+        s = similarity(e.compact, c) * 0.97;
+        if (ph.length >= 3 && e.phon.length >= 3) s = Math.max(s, similarity(e.phon, ph) * 0.9);
+      }
       if (!best || s > best.score) best = { id: e.id, score: s };
     }
-    return best && best.score >= 0.74 ? best : null;
+    return best && best.score >= (opts.min || 0.74) ? best : null;
+  }
+
+  /** crude phonetic key: drop vowels (after the first letter), merge sound-alikes, collapse repeats */
+  function phonetic(s) {
+    let t = String(s).toLowerCase().replace(/[^a-z ]/g, '')
+      .replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/q/g, 'k').replace(/z/g, 's').replace(/x/g, 'ks')
+      .replace(/(\w)\1+/g, '$1');
+    return t.split(' ').filter(Boolean).map((w) => w[0] + w.slice(1).replace(/[aeiouyhw]/g, '')).join('').replace(/(\w)\1+/g, '$1');
   }
 
   Object.assign(CFS, {
     POSITIONS, POS_BY_ID: BY_ID, BOUNDARY_INSET,
-    spotFor, keeperDist, classify, describe, matchPosition, normaliseText,
+    spotFor, keeperDist, classify, describe, matchPosition, normaliseText, phonetic,
   });
 })(typeof window !== 'undefined' ? window : globalThis);

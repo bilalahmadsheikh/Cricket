@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.1.0 — 2026-11-04
+
+### Added
+
+- **T10 format**
+  - Powerplay is overs 1–2, with at most 2 fielders outside the circle.
+  - Middle (overs 3–7) and death (overs 8–10) allow 5 outside.
+  - Batters are more aggressive, wickets are valued lower, and running between the wickets is faster.
+- **Circle and boundary moves**
+  - Inside or outside the circle snaps to the named position at the same angle, e.g. third man ↔ short third man.
+  - Also: edge of the circle, just outside, middle of the circle, halfway between the circle and the boundary, and to the boundary.
+- **Forgiving language**
+  - Phonetic and edit-distance position matching ("thurd man", "long gone", "cover pint").
+  - Spelling and mishearing repair, reported back to the user.
+  - Best-guess matching that picks the most similar name.
+  - The nearest fielder is used when nobody is at the named position.
+  - Spoken numbers work ("fielder three").
+  - "Did you mean…?" suggestions, confirmed by saying "yes".
+
 ## 1.0.0 — 2026-11-04
 
 First release.

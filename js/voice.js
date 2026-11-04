@@ -14,6 +14,10 @@
   // ---------------- normalisation ----------------
   const REPLACEMENTS = [
     [/\b1st\b/g, 'first'], [/\b2nd\b/g, 'second'], [/\b3rd\b/g, 'third'], [/\b4th\b/g, 'fourth'],
+    [/\bt ?10s?\b|\bt ten\b|\bten ten\b|\b(ten|10) over (game|match|cricket|format|league)\b/g, 't10'],
+    [/\b(fielder|player|number|no|man) (one|two|three|four|five|six|seven|eight|nine)\b/g, (m, a, b) => `${a} ${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'].indexOf(b) + 1}`],
+    [/\bthirty yards?\b|\b30 yards?\b/g, '30 yard'],
+    [/\b(inner|fielding) (circle|ring)\b/g, 'circle'],
     [/\bt ?20s?\b|\bt twenty\b|\btwenty ?twenty\b|\btwenty 20\b|\b20 20\b/g, 't20'],
     [/\bo d i\b|\bone ?day( international)?\b|\b50 over(s)?\b|\bfifty over(s)?\b/g, 'odi'],
     [/\btest match\b|\bred ball\b/g, 'test'],
@@ -30,7 +34,7 @@
     [/\boptimi[sz](e|ed|ation)\b/g, 'optimise'],
     [/\banaly[sz]e\b/g, 'analyse'],
   ];
-  const FILLERS = /\b(please|can you|could you|would you|will you|i want to|i want|i would like to|id like to|lets|let us|go ahead and|kindly|okay|ok|hey|now|just|quickly|for me|right now|thanks|thank you)\b/g;
+  const FILLERS = /\b(please|can you|could you|would you|will you|i want to|i want|i would like to|id like to|lets|let us|go ahead and|kindly|okay|ok|hey|now|quickly|for me|right now|thanks|thank you)\b/g;
   const WAKE = /^(hey )?(captain|skipper|field|fielding|coach|cricket)\b[, ]*/;
 
   const NUM_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, twenty: 20, thirty: 30, fifty: 50, hundred: 100, 'a hundred': 100, 'one hundred': 100, thousand: 1000, 'a thousand': 1000 };
@@ -61,11 +65,11 @@
         if (/^(fielder|player|number|no|man) ?\d+$/.test(p)) return 1;
         if (/^(keeper|the keeper)$/.test(p)) return 1;
         for (const n of this.roster) if (n && similarity(normaliseText(n), p) > 0.8) return 0.95;
-        const m = matchPosition(p);
+        const m = matchPosition(p, { min: this._min });
         return m ? m.score : 0;
       },
       scorePosition(phrase) {
-        const m = matchPosition(phrase);
+        const m = matchPosition(phrase, { min: this._min });
         return m ? m.score : 0;
       },
     };
@@ -173,7 +177,7 @@
   const MOVE_VERBS = '(?:move|shift|put|send|take|place|get|bring|station|have|position|change|set|relocate|go|stick|post)';
   const CONNECTORS = ['over to', 'across to', 'back to', 'up to', 'round to', 'out to', 'to', 'at', 'into', 'onto', 'towards', 'toward', 'too', '2', 'in'];
 
-  function splitMove(body, env) {
+  function splitMove(body, env, loose) {
     // try each connector occurrence; pick split maximising combined confidence
     const words = body.split(' ');
     let best = null;
@@ -197,6 +201,21 @@
       const sc = Math.min(sl, sr) - 0.05;
       if (sl >= 0.85 && sr >= 0.85 && (!best || sc > best.score)) best = { from: left, to: right, score: sc };
     }
+    if (best || loose === false) return best;
+    // best-guess pass: accept the most similar names (reported back to the user)
+    env._min = 0.55;
+    try {
+      for (let i = 1; i < words.length; i++) {
+        for (const c of ['to', 'at', 'into', 'too', '2']) {
+          if (words[i] !== c) continue;
+          const left = words.slice(0, i).join(' '), right = words.slice(i + 1).join(' ');
+          if (!left || !right) continue;
+          const sl = env.scoreFielder(left), sr = env.scorePosition(right);
+          const sc = Math.min(sl, sr);
+          if (sl >= 0.55 && sr >= 0.55 && (!best || sc > best.score)) best = { from: left, to: right, score: sc, guessed: true };
+        }
+      }
+    } finally { env._min = undefined; }
     return best;
   }
 
@@ -225,10 +244,42 @@
     return null;
   }
 
+  // Zones relative to the 30-yard circle and the rope. Order matters (most specific first).
+  const CIRCLE = '(?:30 yard )?(?:circle|ring)';
+  const ROPE = '(?:boundary|boundary line|rope|ropes|fence)';
+  const ZONES = [
+    ['between', new RegExp(`(?:(?:middle|halfway|half way|midway|centre|center|in between) (?:of |between |of the gap between )?(?:the )?${CIRCLE} and (?:the )?${ROPE}|between (?:the )?${CIRCLE} and (?:the )?${ROPE}|(?:halfway|half way|midway) (?:to|towards) (?:the )?${ROPE}|in no man s land)$`)],
+    ['mid', new RegExp(`(?:(?:the )?(?:middle|centre|center) of (?:the )?${CIRCLE}|(?:halfway|half way|midway) (?:in|inside|into) (?:the )?${CIRCLE}|(?:in|into) the (?:middle|centre|center)|halfway (?:in|up))$`)],
+    ['justout', new RegExp(`just (?:outside|beyond|out of) (?:the )?${CIRCLE}$`)],
+    ['edge', new RegExp(`(?:(?:the )?(?:edge|line|rim|lip) of (?:the )?${CIRCLE}|(?:the )?${CIRCLE} (?:edge|line)|just inside (?:the )?${CIRCLE}|on (?:the )?${CIRCLE})$`)],
+    ['inside', new RegExp(`(?:inside|in|into|within) (?:the )?${CIRCLE}$`)],
+    ['outside', new RegExp(`(?:outside|out of|beyond|out side) (?:the )?${CIRCLE}$`)],
+    ['boundary', new RegExp(`(?:the )?${ROPE}$`)],
+  ];
+  function parseZone(s, env) {
+    for (const [zone, re] of ZONES) {
+      const m = s.match(re);
+      if (!m) continue;
+      let left = s.slice(0, m.index).trim()
+        .replace(new RegExp(`^(?:${MOVE_VERBS}|push|drop|pull|make|move)\\s+`), '')
+        .replace(/^(?:the)\s+/, '')
+        .trim();
+      // candidates with trailing connector words stripped one at a time ("long on in the" → "long on")
+      const cands = [left];
+      while (/\s(?:the|to|into|onto|on|at|in|inside|over|out|back|up|right|towards|toward|of)$/.test(left)) { left = left.replace(/\s+\w+$/, ''); cands.push(left); }
+      let sc = -1;
+      for (const c of cands) { const v = env.scoreFielder(c); if (v > sc + 1e-9 || (v >= sc - 1e-9 && c.length < left.length)) { sc = v; left = c; } }
+      if (!left) return null;
+      if (sc < 0.74) { env._min = 0.55; try { sc = env.scoreFielder(left); } finally { env._min = undefined; } if (sc < 0.55) return null; return { type: 'zone', ref: left, zone, guessed: true }; }
+      return { type: 'zone', ref: left, zone };
+    }
+    return null;
+  }
+
   function parseOne(raw, env, state = {}) {
     let s = normalise(raw);
     if (!s) return null;
-    s = s.replace(WAKE, '').trim();
+    s = s.replace(WAKE, '').trim().replace(/^just /, '');
     let m;
 
     // --- meta ---
@@ -283,6 +334,10 @@
     }
     if ((m = s.match(/^(?:any|all|every|mixed|natural) shots?$/))) return { type: 'shot', shot: 'any' };
 
+    // --- zone moves: "third man inside the circle", "point to the edge of the circle" ---
+    const zc = parseZone(s, env);
+    if (zc) return zc;
+
     // --- swap ---
     if ((m = s.match(/^(?:swap|switch|exchange|interchange) (.+?) (?:and|with|for|&) (.+)$/)) && env.scoreFielder(m[1]) >= 0.74 && env.scoreFielder(m[2]) >= 0.74) {
       return { type: 'swap', a: m[1], b: m[2] };
@@ -306,7 +361,7 @@
     const mv = s.match(new RegExp(`^(?:${MOVE_VERBS} )?(?:the )?(.+)$`));
     if (mv) {
       const sp = splitMove(mv[1], env);
-      if (sp) return { type: 'move', from: sp.from, to: sp.to, confidence: sp.score };
+      if (sp) return Object.assign({ type: 'move', from: sp.from, to: sp.to, confidence: sp.score }, sp.guessed ? { guessed: true } : {});
     }
 
     // --- presets / traps (explicit) ---
@@ -322,7 +377,8 @@
     else if (/\bleft hander\b|\bleft hand(ed)?\b/.test(s)) settings.hand = 'L';
     else if (/\bright hander\b|\bright hand(ed)?\b/.test(s)) settings.hand = 'R';
 
-    if (/\bt20\b/.test(s)) settings.format = 'T20';
+    if (/\bt10\b/.test(s)) settings.format = 'T10';
+    else if (/\bt20\b/.test(s)) settings.format = 'T20';
     else if (/\bodi\b/.test(s)) settings.format = 'ODI';
     else if (/\btest\b/.test(s)) settings.format = 'Test';
 
@@ -407,8 +463,59 @@
     return null;
   }
 
+  // ---------------- spelling / mishearing repair ----------------
+  const CORE_WORDS = ('move shift put send bring push drop swap add load set show hide zoom simulate bowl run undo redo reset mirror save rename help ' +
+    'field trap plan pitch wicket track deck outfield boundary boundaries circle ring edge middle inside outside halfway between ' +
+    'green flat dry dusty bouncy slow damp balanced turner overcast sunny humid dew fast quick small big large ' +
+    'powerplay death middle overs new old ball test odi t20 t10 left right hander arm spin spinner leg off orthodox chinaman medium pacer ' +
+    'batter keeper slip slips gully point cover wicket square fine third man long mid deep short silly extra cow corner sweeper ' +
+    'which best recommend compare pitches optimise apply analyse where read legal heatmap wagonwheel labels dark light mode over overs balls ' +
+    'yorkers short wide channel stumps body flight darts around up back squarer finer straighter bit').split(' ');
+  let VOCAB = null;
+  function vocab() {
+    if (VOCAB) return VOCAB;
+    const set = new Set(CORE_WORDS);
+    for (const p of CFS.POSITIONS) for (const a of [p.name, ...p.aliases]) for (const w of normaliseText(a).split(' ')) set.add(w);
+    for (const p of PRESETS) for (const w of normaliseText(p.name).split(' ')) if (w.length > 2) set.add(w);
+    for (const sh of Object.values(SHOTS)) for (const w of normaliseText(sh.name).split(' ')) set.add(w);
+    VOCAB = [...set].filter((w) => w.length >= 2).map((w) => ({ w, ph: CFS.phonetic(w) }));
+    return VOCAB;
+  }
+  /** Replace unknown words with the most similar known word (edit distance or sound-alike). */
+  function repair(text) {
+    const words = normalise(text).split(' ');
+    const V = vocab();
+    const known = new Set(V.map((v) => v.w));
+    let changed = false;
+    const out = words.map((w) => {
+      if (w.length < 3 || known.has(w) || /^\d+$/.test(w)) return w;
+      const ph = CFS.phonetic(w);
+      let best = null;
+      for (const v of V) {
+        let sc = similarity(v.w, w);
+        if (ph.length >= 2 && v.ph === ph && Math.abs(v.w.length - w.length) <= 2) sc = Math.max(sc, 0.85);
+        if (!best || sc > best.sc) best = { w: v.w, sc };
+      }
+      if (best && best.sc >= 0.72) { changed = true; return best.w; }
+      return w;
+    });
+    return changed ? out.join(' ') : null;
+  }
+
   /** Parse an utterance that may contain several commands joined by "and"/"then". */
   function parseCommand(text, envIn, state) {
+    const res = parseCommandStrict(text, envIn, state);
+    const shaky = !res.length || res.some((c) => c.guessed);
+    if (!shaky) return res;
+    const fixed = repair(text);
+    if (!fixed) return res;
+    const again = parseCommandStrict(fixed, envIn, state);
+    for (const c of again) { c.repaired = fixed; }
+    if (!res.length) return again;
+    return again.length && !again.some((c) => c.guessed) ? again : res;
+  }
+
+  function parseCommandStrict(text, envIn, state) {
     const env = Object.assign(defaultEnv(), envIn || {});
     const whole = parseOne(text, env, state);
     const norm = normalise(text);
@@ -497,5 +604,5 @@
     }
   }
 
-  Object.assign(CFS, { parseCommand, normaliseCommand: normalise, matchPreset, matchShot, detectBowler, VoiceControl });
+  Object.assign(CFS, { parseCommand, repairCommand: repair, normaliseCommand: normalise, matchPreset, matchShot, detectBowler, VoiceControl });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -136,7 +136,7 @@
   // ------------------------------------------------------------------
   // Fielder references (voice): "mid on", "fielder 3", "Smith", "keeper"
   // ------------------------------------------------------------------
-  function resolveFielder(phrase) {
+  function resolveFielder(phrase, { avoidPos } = {}) {
     const g = ground();
     const p = C.normaliseText(phrase).replace(/^(the|my|our) /, '');
     let m = p.match(/^(?:fielder|player|number|no|man) ?(\d+)$/);
@@ -145,21 +145,25 @@
     for (const f of state.field.fielders) {
       if (f.name && C.similarity(C.normaliseText(f.name), p) > 0.8 && !/^fielder \d/.test(C.normaliseText(f.name))) return { f };
     }
-    const pm = C.matchPosition(p);
+    let pm = C.matchPosition(p);
+    let guessedName = false;
+    if (!pm) { pm = C.matchPosition(p, { min: 0.55 }); guessedName = !!pm; }
     if (!pm) return { err: `I don't know a fielder or position called "${phrase}".` };
     if (pm.id === 'wk') return { f: state.field.fielders.find((x) => x.role === 'keeper') };
     const spot = C.spotFor(pm.id, g, { keeperMode: state.field.keeperMode });
     const sp = C.toXY(spot.theta, spot.d);
     const exact = state.field.fielders.filter((f) => f.role === 'fielder' && C.positionId(f, g, state.field.keeperMode) === pm.id);
-    const pool = exact.length ? exact : state.field.fielders.filter((f) => f.role === 'fielder');
+    const pool = exact.length ? exact : state.field.fielders.filter((f) => f.role === 'fielder' && (!avoidPos || C.positionId(f, g, state.field.keeperMode) !== avoidPos));
     let best = null;
     for (const f of pool) {
       const q = C.toXY(f.theta, f.d);
       const dd = Math.hypot(q.x - sp.x, q.y - sp.y);
       if (!best || dd < best.dd) best = { f, dd };
     }
-    if (exact.length || (best && best.dd < Math.max(8, spot.d * 0.22))) return { f: best.f, posId: pm.id };
-    return { err: `No one is at ${C.POS_BY_ID[pm.id].name}. Nearest is ${best.f.name} at ${C.positionName(best.f, g, state.field.keeperMode)}.`, near: best.f };
+    const note = guessedName ? `(I took “${phrase}” as ${C.POS_BY_ID[pm.id].name}.) ` : '';
+    if (exact.length || (best && best.dd < Math.max(8, spot.d * 0.22))) return { f: best.f, posId: pm.id, note };
+    // Nobody there: use the most similar (nearest) fielder and say so.
+    return { f: best.f, posId: pm.id, note: note + `No one was at ${C.POS_BY_ID[pm.id].name}, so I used the nearest fielder, ${best.f.name} at ${C.positionName(best.f, g, state.field.keeperMode).replace(' (adj.)', '')}. `, nearest: true };
   }
 
   // ------------------------------------------------------------------
@@ -291,6 +295,77 @@
     return `${t.name} moved ${dir === 'in' ? 'up' : dir === 'out' ? 'back' : dir} to ${describeFielder(t).nm}.`;
   }
 
+  /** Move a fielder relative to the 30-yard circle / boundary, keeping their angle. */
+  function zoneMove(cmd) {
+    const g = ground();
+    const r = resolveFielder(cmd.ref);
+    if (!r.f) return r.err;
+    const f = r.f;
+    if (f.role === 'keeper') return applySettings({ keeper: cmd.zone === 'inside' || cmd.zone === 'edge' || cmd.zone === 'mid' ? 'up' : 'back' });
+    const theta = f.theta;
+    const rd = C.ringDist(theta), bd = C.boundaryDist(theta, g);
+    const fromName = C.positionName(f, g, state.field.keeperMode).replace(' (adj.)', '');
+    const nearNamed = (pred) => {
+      let best = null;
+      for (const p of C.POSITIONS) {
+        if (p.id === 'wk') continue;
+        const sp = C.spotFor(p.id, g, { keeperMode: state.field.keeperMode });
+        if (!pred(sp)) continue;
+        const a = C.angDiff(sp.theta, theta);
+        if (a <= 16 && (!best || a < best.a - 1e-9 || (Math.abs(a - best.a) < 4 && sp.d > best.sp.d))) best = { a, sp, p };
+      }
+      return best;
+    };
+    let t = theta, d;
+    const out = !C.insideRingPolar(f.theta, f.d);
+    switch (cmd.zone) {
+      case 'inside': {
+        if (!out && f.d > 12) return `${f.name} is already inside the circle (${fromName}). Say “edge of the circle” or “middle of the circle” to adjust.`;
+        // e.g. third man → short third man: the named ring spot at this angle, else just inside the rope of the ring
+        const n = nearNamed((sp) => C.insideRingPolar(sp.theta, sp.d) && sp.d >= 12);
+        if (n) { t = n.sp.theta; d = n.sp.d; } else d = rd - 2;
+        break;
+      }
+      case 'outside': {
+        if (out) return `${f.name} is already outside the circle (${fromName}).`;
+        const n = nearNamed((sp) => !C.insideRingPolar(sp.theta, sp.d));
+        if (n) { t = n.sp.theta; d = n.sp.d; } else d = bd - C.BOUNDARY_INSET;
+        break;
+      }
+      case 'edge': d = rd - 1.5; break;
+      case 'justout': d = rd + 3; break;
+      case 'mid': d = Math.max(7, rd * 0.55); break;
+      case 'between': d = (rd + bd) / 2; break;
+      case 'boundary': d = bd - C.BOUNDARY_INSET; break;
+    }
+    const nf = moveFielder(f, t, d);
+    view.highlight(f.id);
+    const label = { inside: 'inside the circle', outside: 'outside the circle', edge: 'to the edge of the circle', justout: 'just outside the circle', mid: 'to the middle of the circle', between: 'halfway between the circle and the boundary', boundary: 'to the boundary' }[cmd.zone];
+    const rules = C.checkRules(state.field, state.s, g);
+    let msg = (r.note || '') + `${nf.name} moved ${label}: ${fromName} → ${C.positionName(nf, g, state.field.keeperMode).replace(' (adj.)', '')} (${Math.round(nf.d)} m).`;
+    if (!rules.ok) msg += ' Warning: ' + rules.issues[0];
+    return msg;
+  }
+
+  /** Find the closest known example command to an unrecognised utterance. */
+  function closestCommand(text) {
+    const n = C.normaliseCommand(text);
+    if (!n || n.length < 3) return null;
+    let best = null;
+    const pool = CMD_REF.flatMap(([, list]) => list);
+    for (const ex of pool) {
+      const e = C.normaliseCommand(ex);
+      let sc = C.similarity(e, n);
+      // fuzzy token overlap: how much of the example is covered by (sound-)similar words in the utterance
+      const ut = n.split(' '), et = e.split(' ');
+      const hit = (w) => ut.some((u) => u === w || C.similarity(u, w) >= 0.75 || (w.length > 2 && C.phonetic(u) === C.phonetic(w)));
+      const matched = et.filter(hit).length;
+      sc = Math.max(sc, (matched / et.length) * Math.sqrt(matched / Math.max(1, ut.length)));
+      if (!best || sc > best.sc) best = { ex, sc };
+    }
+    return best && best.sc >= 0.45 ? best.ex : null;
+  }
+
   async function execute(cmd, source = 'text') {
     const g = ground();
     switch (cmd.type) {
@@ -330,7 +405,8 @@
       case 'recommend': showTab('analytics'); return await runRank(cmd.apply);
       case 'analyse': showTab('sim'); return runSimulation();
       case 'apply': {
-        if (!state.pendingField) return 'There is no suggested field waiting. Say "optimise the field" first.';
+        if (state.pendingSuggestion) { const t = state.pendingSuggestion; state.pendingSuggestion = null; await handleUtterance([t], source); return ''; }
+        if (!state.pendingField) return 'There is nothing waiting for a yes. (Say "optimise the field" to get a suggested field.)';
         setField(state.pendingField); state.pendingField = null;
         return 'Optimised field applied.';
       }
@@ -338,7 +414,7 @@
         const r = resolveFielder(cmd.ref);
         if (!r.f) return r.err;
         view.highlight(r.f.id);
-        return describeFielder(r.f).text;
+        return (r.nearest ? r.note : '') + describeFielder(r.f).text;
       }
       case 'read': {
         const parts = state.field.fielders.filter((f) => f.role === 'fielder').map((f) => describeFielder(f));
@@ -390,13 +466,15 @@
       case 'nudge': {
         const r = resolveFielder(cmd.ref);
         if (!r.f) return r.err;
-        return nudge(r.f, cmd.dir, cmd.small);
+        return (r.note || '') + nudge(r.f, cmd.dir, cmd.small);
       }
+      case 'zone': return zoneMove(cmd);
       case 'move': {
-        const r = resolveFielder(cmd.from);
-        if (!r.f) return r.err;
-        const pm = C.matchPosition(cmd.to);
+        let pm = C.matchPosition(cmd.to), toGuess = '';
+        if (!pm) { pm = C.matchPosition(cmd.to, { min: 0.55 }); if (pm) toGuess = `(I took “${cmd.to}” as ${C.POS_BY_ID[pm.id].name}.) `; }
         if (!pm) return `I don't know the position "${cmd.to}".`;
+        const r = resolveFielder(cmd.from, { avoidPos: pm.id });
+        if (!r.f) return r.err;
         if (pm.id === 'wk') return 'Use "swap" to change the wicket-keeper.';
         const fromName = C.positionName(r.f, g, state.field.keeperMode).replace(' (adj.)', '');
         const s = C.spotFor(pm.id, g, { keeperMode: state.field.keeperMode });
@@ -404,7 +482,7 @@
         moveFielder(r.f, s.theta, s.d);
         view.highlight(r.f.id);
         const rules = C.checkRules(state.field, state.s, g);
-        let msg = `${r.f.name}: ${fromName} to ${C.POS_BY_ID[pm.id].name}.`;
+        let msg = (r.note || '') + toGuess + `${r.f.name}: ${fromName} to ${C.POS_BY_ID[pm.id].name}.`;
         if (occupant) msg += ` Note: ${occupant.name} was already there.`;
         if (!rules.ok) msg += ' Warning: ' + rules.issues[0];
         return msg;
@@ -448,10 +526,19 @@
     if (!cmds.length) {
       if (source === 'voice' && state.s.wake) return; // ignore chatter
       const heard = alternatives[0] || '';
+      const guess = closestCommand(heard);
+      if (guess) {
+        state.pendingSuggestion = guess;
+        logCommand(heard, `Did you mean “${guess}”?`, false);
+        toast(`Didn't understand “${heard}”. Did you mean “${guess}”?`, { action: 'Yes, do it', onAction: () => { state.pendingSuggestion = null; handleUtterance([guess], 'text'); }, ms: 8000 });
+        voice.speak(`Did you mean: ${guess}? Say yes to do it.`);
+        return;
+      }
       logCommand(heard, "Sorry — I didn't understand that.", false);
       say(`Sorry, I didn't catch that. Say help for examples.`, { toastText: `Didn't understand: “${heard}”` });
       return;
     }
+    if (!(cmds.length === 1 && cmds[0].type === 'apply')) state.pendingSuggestion = null;
     const replies = [];
     for (const c of cmds) {
       try {
@@ -462,7 +549,8 @@
         replies.push('Something went wrong: ' + e.message);
       }
     }
-    const reply = replies.join(' ');
+    let reply = replies.join(' ');
+    if (cmds[0] && cmds[0].repaired) reply = `(Heard “${chosen}”, understood “${cmds[0].repaired}”.) ` + reply;
     logCommand(chosen, reply, true);
     if (reply) say(reply);
   }
@@ -998,9 +1086,10 @@
   }
 
   const CMD_REF = [
+    ['Circle & boundary', ['move third man inside the circle', 'move short third man outside the circle', 'put point on the edge of the circle', 'fine leg just outside the circle', 'move mid off to the middle of the circle', 'long on halfway between the circle and the boundary', 'send square leg to the boundary']],
     ['Move fielders', ['move long on to mid on', 'put fine leg at short fine leg', 'third man to second slip', 'swap point and cover', 'bring mid off up', 'push fine leg back', 'move point a bit squarer', 'add a slip', 'bring in a short leg', 'move fielder 3 to gully', 'move Smith to deep mid wicket']],
     ['Fields & traps', ['load the death field', 'bouncer trap', 'sweep trap', 'wide yorker trap', 'drive trap', 'ring field', 'mirror field', 'reset field', 'undo', 'save field as new ball plan']],
-    ['Situation', ['T20', 'ODI', 'test match', 'powerplay', 'outside the powerplay', 'death overs', 'left hander', 'switch batter', 'right arm leg spinner', 'left arm orthodox', 'left arm fast', 'medium pacer', 'around the wicket', 'keeper up']],
+    ['Situation', ['T10', 'T20', 'ODI', 'test match', 'powerplay', 'outside the powerplay', 'death overs', 'left hander', 'switch batter', 'right arm leg spinner', 'left arm orthodox', 'left arm fast', 'medium pacer', 'around the wicket', 'keeper up']],
     ['Conditions', ['green pitch', 'the pitch is dusty', 'flat pitch', 'bouncy pitch', 'slow pitch', 'overcast', 'dew', 'fast outfield', 'small boundaries']],
     ['Bowling plan & batter', ['bowl short', 'bowl yorkers', 'bowl wide', 'fourth stump channel', 'stump to stump', 'power hitter batter', 'anchor batter']],
     ['Simulate', ['bowl', 'bowl an over', 'simulate 1000 balls', 'simulate cover drive', 'simulate 5 overs of pull shots', 'any shots']],

@@ -1,6 +1,6 @@
 {
   "name": "fieldcraft-cricket-field-simulator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Voice-controlled cricket field setting simulator with pitch conditions, traps and Monte-Carlo analytics.",
   "private": true,
   "scripts": {

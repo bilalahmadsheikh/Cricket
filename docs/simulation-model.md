@@ -49,6 +49,7 @@ Lower is better for the fielding side.
 
 | Format | Default wicket value |
 |---|---|
+| T10 | 4–6 runs, by phase |
 | T20 | 6–10 runs, by phase |
 | ODI | 10–20 runs |
 | Test | about 30 runs |

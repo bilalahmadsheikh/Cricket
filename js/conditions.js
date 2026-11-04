@@ -11,6 +11,14 @@
   // maxOut = max fielders outside the 30-yard circle (null = no limit).
   // aggression: 0 (survive) .. 1 (all-out attack). wicketValue: runs a wicket is "worth".
   const FORMATS = {
+    T10: {
+      name: 'T10',
+      phases: {
+        powerplay: { name: 'Powerplay (overs 1–2)', short: 'Powerplay', maxOut: 2, aggression: 0.85, wicketValue: 6, powerplay: true },
+        middle: { name: 'Middle overs (3–7)', short: 'Middle', maxOut: 5, aggression: 0.82, wicketValue: 5, powerplay: false },
+        death: { name: 'Death overs (8–10)', short: 'Death', maxOut: 5, aggression: 1.0, wicketValue: 4, powerplay: false },
+      },
+    },
     T20: {
       name: 'T20',
       phases: {
