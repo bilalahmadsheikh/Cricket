@@ -4,6 +4,8 @@ FieldCraft is a static site. To host it, serve the repository root over HTTPS. V
 
 ## Vercel (recommended)
 
+Production: **https://fieldcraft-cricket.vercel.app**. This is Vercel project `fieldcraft-cricket`, built from the `main` branch.
+
 ### Option A: dashboard
 
 1. Sign in at vercel.com with GitHub.

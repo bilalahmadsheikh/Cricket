@@ -2,6 +2,8 @@
 
 A professional, **voice-controlled** cricket field-setting and simulation tool. Set fields for any bowler, batter, pitch and match phase. Move fielders by speaking ("*move long-on to mid-on*"). Load tactical traps. Then let a ball-by-ball Monte-Carlo engine tell you, statistically, which field works best on which pitch.
 
+**Live app: https://fieldcraft-cricket.vercel.app**
+
 Runs entirely in the browser: no build step, no external dependencies, works offline (PWA).
 
 ![FieldCraft](assets/icon.svg)
