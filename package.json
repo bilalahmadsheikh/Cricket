@@ -1,0 +1,11 @@
+{
+  "name": "fieldcraft-cricket-field-simulator",
+  "version": "1.0.0",
+  "description": "Voice-controlled cricket field setting simulator with pitch conditions, traps and Monte-Carlo analytics.",
+  "private": true,
+  "scripts": {
+    "start": "node serve.js 8080",
+    "test": "node --test tests/run.test.js"
+  },
+  "license": "MIT"
+}

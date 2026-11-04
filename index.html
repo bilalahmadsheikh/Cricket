@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FieldCraft — Cricket Field Simulator</title>
+  <meta name="description" content="Voice-controlled cricket field setting, pitch conditions, traps and Monte-Carlo field analytics." />
+  <meta name="theme-color" content="#0f5132" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a class="skip" href="#command-input">Skip to command bar</a>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/icon.svg" alt="" width="28" height="28" />
+      <div>
+        <h1>FieldCraft</h1>
+        <p class="tag">Cricket field simulator · voice controlled</p>
+      </div>
+    </div>
+    <div class="context-chips" id="context-chips" aria-live="polite"></div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-theme" title="Toggle dark / light (say 'dark mode')" aria-label="Toggle theme">◐</button>
+      <button class="icon-btn" id="btn-help" title="Help & voice commands (say 'help')" aria-label="Help">?</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ============ LEFT: setup ============ -->
+    <aside class="panel" id="panel-setup" aria-label="Match setup">
+      <section class="card">
+        <h2>Match</h2>
+        <label>Format
+          <select id="sel-format"></select>
+        </label>
+        <label>Phase
+          <select id="sel-phase"></select>
+        </label>
+        <div class="restriction" id="restriction-note"></div>
+      </section>
+
+      <section class="card">
+        <h2>Bowler</h2>
+        <label>Bowler type
+          <select id="sel-bowler"></select>
+        </label>
+        <div class="seg" role="group" aria-label="Bowling side">
+          <button data-over="1" class="seg-btn">Over the wicket</button>
+          <button data-over="0" class="seg-btn">Around</button>
+        </div>
+        <label>Bowling plan
+          <select id="sel-plan"></select>
+        </label>
+        <p class="hint" id="bowler-note"></p>
+      </section>
+
+      <section class="card">
+        <h2>Batter</h2>
+        <div class="seg" role="group" aria-label="Batter hand">
+          <button data-hand="R" class="seg-btn">Right-hander</button>
+          <button data-hand="L" class="seg-btn">Left-hander</button>
+        </div>
+        <label>Profile
+          <select id="sel-batter"></select>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Conditions</h2>
+        <label>Pitch
+          <select id="sel-pitch"></select>
+        </label>
+        <p class="hint" id="pitch-tip"></p>
+        <div class="grid2">
+          <label>Overhead <select id="sel-overhead"></select></label>
+          <label>Ball <select id="sel-ball"><option value="new">New ball</option><option value="old">Old ball</option></select></label>
+          <label>Outfield <select id="sel-outfield"></select></label>
+          <label>Boundary <select id="sel-ground"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="chk-dew" /> Heavy dew (spinners lose grip)</label>
+      </section>
+    </aside>
+
+    <!-- ============ CENTRE: field ============ -->
+    <section class="field-wrap" aria-label="Cricket field">
+      <div class="field-toolbar">
+        <label class="preset-pick">Field
+          <select id="sel-preset" aria-label="Load a field or trap"></select>
+        </label>
+        <div class="tb-group">
+          <button class="tb" id="btn-undo" title="Undo (Ctrl+Z, say 'undo')">↶</button>
+          <button class="tb" id="btn-redo" title="Redo (Ctrl+Y, say 'redo')">↷</button>
+          <button class="tb" id="btn-mirror" title="Mirror off/leg (say 'mirror field')">⇋</button>
+          <button class="tb" id="btn-save" title="Save field (say 'save field as …')">💾</button>
+          <button class="tb" id="btn-more" title="Export / import / share" aria-haspopup="true">⋯</button>
+        </div>
+        <div class="tb-group">
+          <button class="tb toggle" id="tg-labels" aria-pressed="true" title="Position labels">Aa</button>
+          <button class="tb toggle" id="tg-heatmap" aria-pressed="false" title="Run heat-map (danger zones)">🔥</button>
+          <button class="tb toggle" id="tg-wagon" aria-pressed="false" title="Wagon wheel of last simulation">✳</button>
+          <button class="tb toggle" id="tg-snap" aria-pressed="true" title="Snap to named positions when dragging">⌖</button>
+          <button class="tb" id="btn-zoom" title="Zoom to the batting end (say 'zoom in')">🔍</button>
+        </div>
+        <div class="more-menu" id="more-menu" hidden>
+          <button id="btn-export">Export field (JSON)</button>
+          <button id="btn-import">Import field (JSON)</button>
+          <button id="btn-png">Download image (PNG)</button>
+          <button id="btn-share">Copy share link</button>
+          <button id="btn-print">Print field card</button>
+          <input type="file" id="file-import" accept="application/json,.json" hidden />
+        </div>
+      </div>
+      <div class="field-stage">
+        <svg id="field-svg" role="application" aria-label="Field diagram. Drag fielders, or tap a fielder then tap a spot." xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="ticker" id="ticker" aria-live="polite"></div>
+      </div>
+      <div class="rule-bar" id="rule-bar" aria-live="polite"></div>
+    </section>
+
+    <!-- ============ RIGHT: tabs ============ -->
+    <aside class="panel" id="panel-tabs">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="field" aria-selected="true">Fielders</button>
+        <button role="tab" data-tab="sim">Simulate</button>
+        <button role="tab" data-tab="analytics">Analytics</button>
+        <button role="tab" data-tab="voice">Voice</button>
+      </div>
+
+      <div class="tab-panel" data-panel="field">
+        <p class="hint">Drag a fielder, tap a fielder then tap a spot, pick a position below, or just say it: <em>“move long-on to mid-on”</em>.</p>
+        <div id="fielder-list" class="fielder-list"></div>
+        <div class="preset-desc" id="preset-desc"></div>
+      </div>
+
+      <div class="tab-panel" data-panel="sim" hidden>
+        <div class="grid2">
+          <label>Shot focus <select id="sel-shot"></select></label>
+          <label>Sample size <select id="sel-balls"><option>600</option><option selected>3000</option><option>6000</option><option>12000</option></select></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btn-ball">Bowl 1 ball</button>
+          <button class="btn" id="btn-over">Bowl an over</button>
+          <button class="btn primary" id="btn-sim">Run simulation</button>
+        </div>
+        <div id="over-log" class="over-log"></div>
+        <div id="sim-results"></div>
+      </div>
+
+      <div class="tab-panel" data-panel="analytics" hidden>
+        <label>Objective <select id="sel-objective"></select></label>
+        <div class="btn-row">
+          <button class="btn primary" id="btn-rank" title="Say 'which field is best'">Rank fields</button>
+          <button class="btn" id="btn-matrix" title="Say 'compare pitches'">Pitch matrix</button>
+          <button class="btn" id="btn-opt" title="Say 'optimise the field'">Optimise field</button>
+        </div>
+        <div class="progress" id="progress" hidden><div class="bar"></div><span></span><button class="link" id="btn-cancel">cancel</button></div>
+        <div id="analytics-out"></div>
+      </div>
+
+      <div class="tab-panel" data-panel="voice" hidden>
+        <div class="grid2">
+          <label>Accent / language
+            <select id="sel-lang">
+              <option value="en-GB">English (UK)</option>
+              <option value="en-IN">English (India)</option>
+              <option value="en-AU">English (Australia)</option>
+              <option value="en-US">English (US)</option>
+              <option value="en-ZA">English (South Africa)</option>
+              <option value="en-NZ">English (New Zealand)</option>
+              <option value="en-PK">English (Pakistan)</option>
+            </select>
+          </label>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="chk-speak" checked /> Spoken replies</label>
+            <label class="check"><input type="checkbox" id="chk-wake" /> Require wake word “Captain”</label>
+          </div>
+        </div>
+        <p class="hint" id="voice-support"></p>
+        <h3>Recent commands</h3>
+        <ol id="voice-log" class="voice-log" reversed></ol>
+        <h3>What you can say</h3>
+        <div id="cmd-ref" class="cmd-ref"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ============ COMMAND BAR ============ -->
+  <footer class="command-bar">
+    <button class="mic" id="btn-mic" aria-pressed="false" title="Start / stop listening (M, or hold Space)">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg>
+      <span class="mic-label">Tap to talk</span>
+    </button>
+    <form id="command-form" class="command-form" autocomplete="off">
+      <input id="command-input" type="text" placeholder="Say or type a command — e.g. “move long-on to mid-on”, “bouncer trap”, “which field is best?”" aria-label="Command" />
+      <button type="submit" class="btn">Go</button>
+    </form>
+    <div class="interim" id="interim" aria-live="polite"></div>
+    <div class="suggest" id="suggest"></div>
+  </footer>
+
+  <div class="toast-wrap" id="toasts" aria-live="assertive"></div>
+
+  <dialog id="help-dialog">
+    <form method="dialog" class="dlg">
+      <h2>FieldCraft — quick guide</h2>
+      <div id="help-body"></div>
+      <menu><button class="btn primary" value="ok">Got it</button></menu>
+    </form>
+  </dialog>
+
+  <script src="js/core.js"></script>
+  <script src="js/positions.js"></script>
+  <script src="js/conditions.js"></script>
+  <script src="js/presets.js"></script>
+  <script src="js/field.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

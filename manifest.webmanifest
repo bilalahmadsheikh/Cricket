@@ -1,0 +1,10 @@
+{
+  "name": "FieldCraft — Cricket Field Simulator",
+  "short_name": "FieldCraft",
+  "description": "Voice-controlled cricket field setting, traps and Monte-Carlo field analytics.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0e1411",
+  "theme_color": "#0f5132",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
